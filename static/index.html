@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Food Diary</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96" />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="shortcut icon" href="/favicon.ico" />
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+<link rel="manifest" href="/site.webmanifest" />
+<style>
+  :root {
+    --bg:        #0d0f0e;
+    --surface:   #141714;
+    --surface2:  #1b1e1b;
+    --border:    #252825;
+    --border2:   #2e332e;
+    --text:      #d4d9d4;
+    --text-dim:  #6b736b;
+    --text-faint:#3a3f3a;
+    --accent:    #6b9fff;
+    --accent-dim:#2d5a9e;
+    --accent-bg: #0f1e37;
+    --red:       #e07070;
+    --red-bg:    #2e1a1a;
+    --mono:      'JetBrains Mono', monospace;
+    --sans:      'Inter', sans-serif;
+    --radius:    8px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 15px;
+    font-weight: 400;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* ── Layout ── */
+  .shell {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    grid-template-rows: 58px 1fr;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* ── Header ── */
+  header {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    gap: 12px;
+  }
+  .logo {
+    font-family: var(--mono);
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: .06em;
+    color: var(--accent);
+    flex-shrink: 0;
+  }
+  .logo span { color: var(--text-dim); font-weight: 300; }
+  .header-actions { display: flex; gap: 8px; align-items: center; }
+  .btn-ghost {
+    background: none;
+    border: 1px solid var(--border2);
+    color: var(--text-dim);
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .05em;
+    padding: 5px 12px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: all .15s;
+    white-space: nowrap;
+  }
+  .btn-ghost:hover { border-color: var(--accent-dim); color: var(--accent); }
+
+  /* mobile add toggle — hidden on desktop */
+  .btn-mobile-add {
+    display: none;
+    background: var(--accent-bg);
+    border: 1px solid var(--accent-dim);
+    color: var(--accent);
+    font-family: var(--mono);
+    font-size: 20px;
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    transition: all .15s;
+    flex-shrink: 0;
+    line-height: 1;
+  }
+  .btn-mobile-add:hover { background: var(--accent-dim); }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── Add Form ── */
+  .add-form {
+    padding: 18px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .form-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: .12em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 5px;
+    display: block;
+  }
+  .input-wrap { position: relative; }
+  input[type="text"], input[type="datetime-local"] {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 9px 12px;
+    outline: none;
+    transition: border-color .15s;
+  }
+  input:focus { border-color: var(--accent-dim); }
+  input[type="datetime-local"] { color-scheme: dark; }
+
+  /* autocomplete */
+  .autocomplete-list {
+    position: absolute;
+    top: calc(100% + 3px);
+    left: 0; right: 0;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    z-index: 100;
+    max-height: 200px;
+    overflow-y: auto;
+    display: none;
+    box-shadow: 0 4px 24px rgba(0,0,0,.4);
+  }
+  .autocomplete-list.visible { display: block; }
+  .ac-item {
+    padding: 9px 12px;
+    font-family: var(--mono);
+    font-size: 13px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border);
+    transition: background .1s;
+  }
+  .ac-item:last-child { border-bottom: none; }
+  .ac-item:hover, .ac-item.selected { background: var(--accent-bg); color: var(--accent); }
+  .ac-item mark { background: none; color: var(--accent); font-weight: 500; }
+
+  .btn-add {
+    background: var(--accent-bg);
+    border: 1px solid var(--accent-dim);
+    color: var(--accent);
+    font-family: var(--mono);
+    font-size: 13px;
+    letter-spacing: .06em;
+    padding: 10px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: all .15s;
+    width: 100%;
+    font-weight: 400;
+  }
+  .btn-add:hover { background: var(--accent-dim); }
+  .btn-add:active { transform: scale(.98); }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── Main ── */
+  .main {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--bg);
+  }
+  .main-header {
+    padding: 22px 32px 14px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .main-header-top { display: flex; align-items: baseline; gap: 12px; }
+  .main-date {
+    font-family: var(--sans);
+    font-size: 21px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: -.02em;
+  }
+  .main-count {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+
+  /* select giorno */
+  .day-select-wrap { margin-top: 4px; max-width: 300px; }
+  #day-select {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    color: var(--accent);
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 6px 12px;
+    border-radius: var(--radius);
+    outline: none;
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b736b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    padding-right: 32px;
+  }
+  #day-select:hover { border-color: var(--accent-dim); }
+  .entries-wrap {
+    flex: 1;
+    overflow-y: auto;
+    padding: 18px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  /* ── Entry row ── */
+  .entry-row {
+    display: grid;
+    grid-template-columns: 52px 1fr auto;
+    align-items: start;
+    gap: 14px;
+    padding: 14px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    transition: border-color .15s;
+  }
+  .entry-row:hover { border-color: var(--border2); }
+  .entry-time {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--accent);
+    font-weight: 500;
+    padding-top: 2px;
+  }
+  .entry-food {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--text);
+    word-break: break-word;
+    letter-spacing: -.01em;
+  }
+  .entry-notes {
+    font-size: 13px;
+    color: #a0a6a0; /* schiarito */
+    margin-top: 3px;
+    font-style: italic;
+    font-weight: 300;
+  }
+  .entry-actions { display: flex; gap: 4px; opacity: 0; transition: opacity .15s; }
+  .entry-row:hover .entry-actions { opacity: 1; }
+  .btn-icon {
+    background: none;
+    border: 1px solid var(--border2);
+    color: var(--text-dim);
+    width: 28px; height: 28px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 13px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all .12s;
+    line-height: 1;
+  }
+  .btn-icon:hover { border-color: var(--accent-dim); color: var(--accent); }
+  .btn-icon.del:hover { border-color: var(--red); color: var(--red); background: var(--red-bg); }
+  
+  /* categories chips */
+  .cat-selector { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px; }
+  .cat-chip {
+    padding: 4px 10px;
+    border-radius: 14px;
+    border: 1px solid var(--border2);
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    cursor: pointer;
+    color: var(--text-dim);
+    transition: all .15s;
+  }
+  .cat-chip:hover { border-color: var(--accent-dim); color: var(--accent); }
+  .cat-chip.active { background: var(--accent-bg); border-color: var(--accent-dim); color: var(--accent); }
+  
+  .entry-cat {
+    font-family: var(--mono);
+    font-size: 9px;
+    text-transform: uppercase;
+    color: var(--accent-dim);
+    margin-bottom: 2px;
+    letter-spacing: .05em;
+  }
+
+  /* inline edit */
+  .entry-row.editing { border-color: var(--accent-dim); background: var(--accent-bg); }
+  .edit-row {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: 165px 1fr;
+    gap: 8px;
+    margin-top: 6px;
+  }
+  .edit-row input { font-size: 13px; }
+  .edit-actions { display: flex; gap: 6px; margin-top: 8px; grid-column: 1 / -1; }
+  .btn-sm {
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 6px 14px;
+    border-radius: 5px;
+    cursor: pointer;
+    border: 1px solid;
+    transition: all .12s;
+  }
+  .btn-sm.save { background: var(--accent-bg); border-color: var(--accent-dim); color: var(--accent); }
+  .btn-sm.save:hover { background: var(--accent-dim); }
+  .btn-sm.cancel { background: none; border-color: var(--border2); color: var(--text-dim); }
+  .btn-sm.cancel:hover { border-color: var(--text-dim); color: var(--text); }
+
+  /* ── Empty state ── */
+  .empty {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-faint);
+    font-family: var(--mono);
+    font-size: 13px;
+    gap: 10px;
+    text-align: center;
+    padding: 40px;
+  }
+  .empty-icon { font-size: 36px; opacity: .3; }
+
+  /* ── Toast ── */
+  #toast {
+    position: fixed;
+    bottom: 24px; right: 24px;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 11px 18px;
+    border-radius: var(--radius);
+    opacity: 0;
+    transform: translateY(8px);
+    transition: all .2s;
+    pointer-events: none;
+    z-index: 999;
+  }
+  #toast.show { opacity: 1; transform: translateY(0); }
+  #toast.ok { border-color: var(--accent-dim); color: var(--accent); }
+  #toast.err { border-color: var(--red); color: var(--red); }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+  /* ═══════════════════════════════════════════
+     MOBILE  (≤ 768px)
+  ═══════════════════════════════════════════ */
+  @media (max-width: 768px) {
+    .shell {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    header { padding: 0 16px; flex-shrink: 0; }
+    .btn-mobile-add { display: flex; }
+
+    /* Sidebar on mobile: always visible, but add-form inside it toggles */
+    .sidebar {
+      border-right: none;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+    
+    .add-form {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height .3s ease;
+      border-bottom: none;
+      padding: 0 16px;
+      gap: 10px;
+    }
+    .add-form.open {
+      max-height: 500px;
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* remove day-list legacy on mobile */
+    .day-list { display: none; }
+
+    .day-item {
+      border-left: none;
+      border-bottom: 2px solid transparent;
+      padding: 5px 12px;
+      border-radius: 20px;
+      background: var(--surface2);
+      white-space: nowrap;
+      flex-shrink: 0;
+      font-size: 12px;
+      display: inline-flex;
+      gap: 6px;
+      overflow: visible;
+    }
+    .day-item.active {
+      border-left: none;
+      border-bottom: 2px solid var(--accent);
+      background: var(--accent-bg);
+      color: var(--accent);
+    }
+
+    .main-header { padding: 14px 18px 12px; }
+    .main-date { font-size: 17px; }
+    .day-select-wrap { max-width: 100%; }
+    .entries-wrap { padding: 12px 16px; gap: 8px; }
+
+    .entry-row {
+      grid-template-columns: 46px 1fr auto;
+      gap: 10px;
+      padding: 12px 14px;
+    }
+
+    /* always show actions on touch screens */
+    .entry-actions { opacity: 1; }
+
+    .edit-row { grid-template-columns: 1fr; }
+
+    #toast { bottom: 16px; right: 16px; left: 16px; text-align: center; }
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- Header -->
+  <header>
+    <div class="logo">food<span>://</span>diary</div>
+    <div class="header-actions">
+      <button class="btn-ghost" onclick="exportData('csv')">↓ CSV</button>
+      <button class="btn-ghost" onclick="exportData('json')">↓ JSON</button>
+      <button class="btn-mobile-add" id="btn-mobile-add" onclick="toggleMobileForm()" title="Aggiungi voce">＋</button>
+    </div>
+  </header>
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="add-form">
+      <div>
+        <label class="form-label" for="inp-ts">quando</label>
+        <input type="datetime-local" id="inp-ts">
+      </div>
+      <div>
+        <label class="form-label" for="inp-food">cosa</label>
+        <div class="input-wrap">
+          <input type="text" id="inp-food" placeholder="es. pasta al pesto" autocomplete="off">
+          <div class="autocomplete-list" id="ac-list"></div>
+        </div>
+      </div>
+      <div>
+        <label class="form-label" for="inp-notes">quantità</label>
+        <input type="text" id="inp-notes" placeholder="es. 100gr o 1 piatto">
+      </div>
+      <div>
+        <label class="form-label">pasto</label>
+        <div class="cat-selector" id="add-cat-selector">
+          <div class="cat-chip" onclick="selectCat('colazione', 'add')">colazione</div>
+          <div class="cat-chip" onclick="selectCat('pranzo', 'add')">pranzo</div>
+          <div class="cat-chip" onclick="selectCat('snack', 'add')">snack</div>
+          <div class="cat-chip" onclick="selectCat('cena', 'add')">cena</div>
+          <div class="cat-chip" onclick="selectCat('dopocena', 'add')">dopocena</div>
+        </div>
+        <input type="hidden" id="inp-cat" value="">
+      </div>
+      <button class="btn-add" onclick="addEntry()">+ aggiungi</button>
+    </div>
+    <div class="day-list" id="day-list" style="display:none"></div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <div class="main-header">
+      <div class="main-header-top">
+        <div class="main-date" id="main-date">—</div>
+        <div class="main-count" id="main-count"></div>
+      </div>
+      <div class="day-select-wrap">
+        <select id="day-select" onchange="selectDay(this.value)"></select>
+      </div>
+    </div>
+    <div class="entries-wrap" id="entries-wrap">
+      <div class="empty">
+        <div class="empty-icon">⬡</div>
+        <div>seleziona un giorno</div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+let allEntries  = [];
+let currentDate = null;
+let acResults   = [];
+let acIndex     = -1;
+let acDebounce  = null;
+let editingId   = null;
+let currentAddCat = '';
+
+function selectCat(cat, context, id) {
+  if (context === 'add') {
+    currentAddCat = currentAddCat === cat ? '' : cat;
+    document.getElementById('inp-cat').value = currentAddCat;
+    updateCatUI('add-cat-selector', currentAddCat);
+  } else {
+    const hidden = document.getElementById(`edit-cat-inp-${id}`);
+    hidden.value = hidden.value === cat ? '' : cat;
+    updateCatUI(`edit-cat-selector-${id}`, hidden.value);
+  }
+}
+
+function updateCatUI(containerId, activeCat) {
+  const container = document.getElementById(containerId);
+  container.querySelectorAll('.cat-chip').forEach(chip => {
+    if (chip.textContent.trim() === activeCat) chip.classList.add('active');
+    else chip.classList.remove('active');
+  });
+}
+
+// ── Mobile helpers ────────────────────────────────────────────────────────────
+function isMobile() { return window.innerWidth <= 768; }
+
+function toggleMobileForm() {
+  const form = document.querySelector('.add-form');
+  form.classList.toggle('open');
+  document.getElementById('btn-mobile-add').textContent =
+    form.classList.contains('open') ? '✕' : '＋';
+}
+
+function closeMobileForm() {
+  if (!isMobile()) return;
+  const form = document.querySelector('.add-form');
+  form.classList.remove('open');
+  document.getElementById('btn-mobile-add').textContent = '＋';
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  setNow();
+  loadAll();
+
+  const foodInput = document.getElementById('inp-food');
+  foodInput.addEventListener('input', onFoodInput);
+  foodInput.addEventListener('keydown', onFoodKeydown);
+  foodInput.addEventListener('blur', () => setTimeout(hideAc, 150));
+
+  document.getElementById('inp-ts').addEventListener('keydown', e => {
+    if (e.key === 'Enter') foodInput.focus();
+  });
+  foodInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && acIndex < 0) addEntry();
+  });
+  document.getElementById('inp-notes').addEventListener('keydown', e => {
+    if (e.key === 'Enter') addEntry();
+  });
+});
+
+function setNow() {
+  const now = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  const val = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  document.getElementById('inp-ts').value = val;
+}
+
+// ── API helpers ───────────────────────────────────────────────────────────────
+async function api(method, path, body) {
+  const opts = { method, headers: {'Content-Type':'application/json'} };
+  if (body !== undefined) opts.body = JSON.stringify(body);
+  const r = await fetch(path, opts);
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({detail: r.statusText}));
+    throw new Error(err.detail || r.statusText);
+  }
+  if (r.status === 204) return null;
+  return r.json();
+}
+
+// ── Load all entries ──────────────────────────────────────────────────────────
+async function loadAll() {
+  try {
+    allEntries = await api('GET', '/api/entries?limit=1000');
+    renderSidebar();
+    if (currentDate) renderDay(currentDate);
+    else if (allEntries.length) {
+      const latest = allEntries[0].ts.slice(0, 10);
+      selectDay(latest);
+    }
+  } catch(e) { toast('Errore caricamento: ' + e.message, 'err'); }
+}
+
+// ── Sidebar / Day Selector ───────────────────────────────────────────────────
+function renderSidebar() {
+  const days = {};
+  allEntries.forEach(e => {
+    const d = e.ts.slice(0, 10);
+    days[d] = (days[d] || 0) + 1;
+  });
+  const sorted = Object.keys(days).sort((a, b) => b.localeCompare(a));
+
+  const select = document.getElementById('day-select');
+  select.innerHTML = sorted.map(d => {
+    const label = `${formatDay(d)} (${days[d]})`;
+    return `<option value="${d}">${label}</option>`;
+  }).join('');
+  
+  if (currentDate) select.value = currentDate;
+}
+
+function formatDay(d) {
+  const [y, m, day] = d.split('-').map(Number);
+  const dt = new Date(y, m - 1, day);
+  const days = ['dom','lun','mar','mer','gio','ven','sab'];
+  const months = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
+  return `${days[dt.getDay()]} ${day} ${months[m-1]}`;
+}
+
+function formatDayFull(d) {
+  const [y, m, day] = d.split('-').map(Number);
+  const dt = new Date(y, m - 1, day);
+  const DAYS = ['domenica','lunedì','martedì','mercoledì','giovedì','venerdì','sabato'];
+  const MONTHS = ['gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','agosto','settembre','ottobre','novembre','dicembre'];
+  return `${DAYS[dt.getDay()]} ${day} ${MONTHS[m-1]} ${y}`;
+}
+
+function selectDay(d) {
+  currentDate = d;
+  const select = document.getElementById('day-select');
+  if (select.value !== d) select.value = d;
+  
+  renderSidebar();
+  renderDay(d);
+  closeMobileForm();
+}
+
+// ── Day view ──────────────────────────────────────────────────────────────────
+function renderDay(d) {
+  document.getElementById('main-date').textContent = formatDayFull(d);
+  const entries = allEntries
+    .filter(e => e.ts.slice(0, 10) === d)
+    .sort((a, b) => a.ts.localeCompare(b.ts));
+
+  document.getElementById('main-count').textContent =
+    entries.length ? `${entries.length} ${entries.length > 1 ? 'voci' : 'voce'}` : '';
+
+  const wrap = document.getElementById('entries-wrap');
+  if (!entries.length) {
+    wrap.innerHTML = `<div class="empty"><div class="empty-icon">⬡</div><div>nessuna voce per questo giorno</div></div>`;
+    return;
+  }
+  wrap.innerHTML = entries.map(e => entryHTML(e)).join('');
+}
+
+function entryHTML(e) {
+  const time = e.ts.slice(11, 16);
+  const cat = e.cat ? `<div class="entry-cat">${esc(e.cat)}</div>` : '';
+  const notes = e.notes ? `<div class="entry-notes">${esc(e.notes)}</div>` : '';
+  return `<div class="entry-row" id="entry-${e.id}">
+    <div class="entry-time">${time}</div>
+    <div>
+      ${cat}
+      <div class="entry-food">${esc(e.food)}</div>
+      ${notes}
+    </div>
+    <div class="entry-actions">
+      <button class="btn-icon" onclick="startEdit(${e.id})" title="modifica">✎</button>
+      <button class="btn-icon del" onclick="deleteEntry(${e.id})" title="elimina">✕</button>
+    </div>
+  </div>`;
+}
+
+// ── Add entry ─────────────────────────────────────────────────────────────────
+async function addEntry() {
+  const ts    = document.getElementById('inp-ts').value;
+  const food  = document.getElementById('inp-food').value.trim();
+  const notes = document.getElementById('inp-notes').value.trim();
+  const cat   = document.getElementById('inp-cat').value;
+  if (!ts)   { toast('Imposta la data/ora', 'err'); return; }
+  if (!food) { toast('Inserisci cosa hai mangiato', 'err'); return; }
+  try {
+    await api('POST', '/api/entries', { ts, food, notes, cat });
+    document.getElementById('inp-food').value  = '';
+    document.getElementById('inp-notes').value = '';
+    document.getElementById('inp-cat').value   = '';
+    currentAddCat = '';
+    updateCatUI('add-cat-selector', '');
+    setNow();
+    hideAc();
+    await loadAll();
+    selectDay(ts.slice(0, 10));
+    toast('aggiunto ✓', 'ok');
+    closeMobileForm();
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+// ── Delete ────────────────────────────────────────────────────────────────────
+async function deleteEntry(id) {
+  if (!confirm('Sei sicuro di voler eliminare questa voce?')) return;
+  try {
+    await api('DELETE', `/api/entries/${id}`);
+    allEntries = allEntries.filter(e => e.id !== id);
+    renderSidebar();
+    renderDay(currentDate);
+    toast('eliminato', 'ok');
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+// ── Edit ──────────────────────────────────────────────────────────────────────
+function startEdit(id) {
+  if (editingId) cancelEdit(editingId);
+  editingId = id;
+  const entry = allEntries.find(e => e.id === id);
+  const row   = document.getElementById(`entry-${id}`);
+  row.classList.add('editing');
+  row.innerHTML = `
+    <div class="entry-time">${entry.ts.slice(11,16)}</div>
+    <div><div class="entry-food">${esc(entry.food)}</div></div>
+    <div></div>
+    <div class="edit-row">
+      <input type="datetime-local" id="edit-ts-${id}" value="${entry.ts}">
+      <input type="text" id="edit-food-${id}" value="${esc(entry.food)}">
+    </div>
+    <div class="edit-row" style="margin-top:0">
+      <input type="text" id="edit-notes-${id}" placeholder="quantità" value="${esc(entry.notes||'')}">
+      <div></div>
+    </div>
+    <div class="edit-row" style="margin-top:0">
+      <div>
+        <div class="cat-selector" id="edit-cat-selector-${id}">
+          <div class="cat-chip ${entry.cat==='colazione'?'active':''}" onclick="selectCat('colazione', 'edit', ${id})">colazione</div>
+          <div class="cat-chip ${entry.cat==='pranzo'?'active':''}" onclick="selectCat('pranzo', 'edit', ${id})">pranzo</div>
+          <div class="cat-chip ${entry.cat==='snack'?'active':''}" onclick="selectCat('snack', 'edit', ${id})">snack</div>
+          <div class="cat-chip ${entry.cat==='cena'?'active':''}" onclick="selectCat('cena', 'edit', ${id})">cena</div>
+          <div class="cat-chip ${entry.cat==='dopocena'?'active':''}" onclick="selectCat('dopocena', 'edit', ${id})">dopocena</div>
+        </div>
+        <input type="hidden" id="edit-cat-inp-${id}" value="${esc(entry.cat||'')}">
+      </div>
+    </div>
+    <div class="edit-actions" style="grid-column:1/-1">
+      <button class="btn-sm save" onclick="saveEdit(${id})">salva</button>
+      <button class="btn-sm cancel" onclick="cancelEdit(${id})">annulla</button>
+    </div>`;
+  document.getElementById(`edit-food-${id}`).focus();
+}
+
+async function saveEdit(id) {
+  const ts    = document.getElementById(`edit-ts-${id}`).value;
+  const food  = document.getElementById(`edit-food-${id}`).value.trim();
+  const notes = document.getElementById(`edit-notes-${id}`).value.trim();
+  const cat   = document.getElementById(`edit-cat-inp-${id}`).value;
+  if (!food) { toast('Il campo cibo non può essere vuoto', 'err'); return; }
+  try {
+    const updated = await api('PUT', `/api/entries/${id}`, { ts, food, notes, cat });
+    const idx = allEntries.findIndex(e => e.id === id);
+    if (idx >= 0) allEntries[idx] = updated;
+    editingId = null;
+    renderSidebar();
+    renderDay(currentDate);
+    toast('salvato ✓', 'ok');
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+function cancelEdit(id) {
+  editingId = null;
+  renderDay(currentDate);
+}
+
+// ── Autocomplete ──────────────────────────────────────────────────────────────
+function onFoodInput() {
+  clearTimeout(acDebounce);
+  acDebounce = setTimeout(fetchAc, 120);
+}
+
+async function fetchAc() {
+  const q = document.getElementById('inp-food').value;
+  try {
+    acResults = await api('GET', `/api/foods?q=${encodeURIComponent(q)}`);
+    renderAc(q);
+  } catch {}
+}
+
+function renderAc(q) {
+  const list = document.getElementById('ac-list');
+  if (!acResults.length) { hideAc(); return; }
+  acIndex = -1;
+  list.innerHTML = '';
+
+  acResults.forEach((name, i) => {
+    const item = document.createElement('div');
+    item.className = 'ac-item';
+    item.dataset.i = String(i);
+
+    if (!q) {
+      item.textContent = name;
+    } else {
+      const nameLower = name.toLowerCase();
+      const qLower = q.toLowerCase();
+      let start = 0;
+      let idx = nameLower.indexOf(qLower, start);
+
+      while (idx !== -1) {
+        if (idx > start) {
+          item.appendChild(document.createTextNode(name.slice(start, idx)));
+        }
+        const mark = document.createElement('mark');
+        mark.textContent = name.slice(idx, idx + q.length);
+        item.appendChild(mark);
+        start = idx + q.length;
+        idx = nameLower.indexOf(qLower, start);
+      }
+
+      if (start < name.length) {
+        item.appendChild(document.createTextNode(name.slice(start)));
+      }
+    }
+
+    item.addEventListener('mousedown', () => pickAc(name));
+    list.appendChild(item);
+  });
+  list.classList.add('visible');
+}
+
+function pickAc(name) {
+  document.getElementById('inp-food').value = name;
+  hideAc();
+  document.getElementById('inp-notes').focus();
+}
+
+function hideAc() {
+  document.getElementById('ac-list').classList.remove('visible');
+  acResults = [];
+  acIndex   = -1;
+}
+
+function onFoodKeydown(e) {
+  const list  = document.getElementById('ac-list');
+  const items = list.querySelectorAll('.ac-item');
+  if (!items.length) return;
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    acIndex = Math.min(acIndex + 1, items.length - 1);
+    items.forEach((el, i) => el.classList.toggle('selected', i === acIndex));
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    acIndex = Math.max(acIndex - 1, -1);
+    items.forEach((el, i) => el.classList.toggle('selected', i === acIndex));
+  } else if (e.key === 'Enter' && acIndex >= 0) {
+    e.preventDefault();
+    pickAc(acResults[acIndex]);
+  } else if (e.key === 'Escape') {
+    hideAc();
+  }
+}
+
+// ── Export ────────────────────────────────────────────────────────────────────
+function exportData(fmt) {
+  window.location.href = `/api/export/${fmt}`;
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+let toastTimer;
+function toast(msg, type = 'ok') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `show ${type}`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = ''; }, 2200);
+}
+
+// ── Utils ─────────────────────────────────────────────────────────────────────
+function esc(s) {
+  return String(s || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+</script>
+</body>
+</html>

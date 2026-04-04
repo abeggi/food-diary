@@ -1,0 +1,24 @@
+[Unit]
+Description=Food Diary – personal food log webapp
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/food-diary
+ExecStart=/opt/food-diary/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8080 --workers 1
+Restart=on-failure
+RestartSec=5
+
+# Data path – override here if you want the DB elsewhere
+Environment=FOOD_DIARY_DB=/opt/food-diary/data/food_diary.db
+
+# Hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/opt/food-diary/data
+
+[Install]
+WantedBy=multi-user.target

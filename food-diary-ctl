@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# food-diary-ctl – gestione del servizio Food Diary
+# Uso: ./food-diary-ctl {start|stop|restart|status|logs|tail}
+
+SERVICE="food-diary"
+
+_require_root() {
+  if [[ $EUID -ne 0 ]]; then
+    echo "→ questo comando richiede i permessi di root (usa sudo)"
+    exit 1
+  fi
+}
+
+cmd="${1:-status}"
+
+case "$cmd" in
+  start)
+    _require_root
+    systemctl start "$SERVICE"
+    echo "✓ avviato"
+    systemctl --no-pager status "$SERVICE" | grep -E "Active:|Main PID:"
+    ;;
+  stop)
+    _require_root
+    systemctl stop "$SERVICE"
+    echo "✓ fermato"
+    ;;
+  restart)
+    _require_root
+    systemctl restart "$SERVICE"
+    echo "✓ riavviato"
+    systemctl --no-pager status "$SERVICE" | grep -E "Active:|Main PID:"
+    ;;
+  status)
+    systemctl --no-pager status "$SERVICE"
+    ;;
+  logs)
+    journalctl -u "$SERVICE" --no-pager -n 100
+    ;;
+  tail)
+    echo "→ Ctrl+C per uscire"
+    journalctl -u "$SERVICE" -f
+    ;;
+  *)
+    echo "Uso: $0 {start|stop|restart|status|logs|tail}"
+    exit 1
+    ;;
+esac
