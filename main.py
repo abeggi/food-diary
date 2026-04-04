@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, UploadFile, File
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, StreamingResponse, FileResponse
 from pydantic import BaseModel
@@ -10,10 +10,18 @@ import csv
 import json
 from datetime import datetime
 from contextlib import contextmanager
+import base64
+import httpx
+from dotenv import load_dotenv
 
 # ── Config ────────────────────────────────────────────────────────────────────
+load_dotenv()
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH  = os.environ.get("FOOD_DIARY_DB", os.path.join(BASE_DIR, "food_diary.db"))
+
+# AI config (Google Gemini)
+GEMINI_KEY    = os.environ.get("GEMINI_API_KEY", "")
+GEMINI_MODEL  = os.environ.get("GEMINI_MODEL", "gemini-1.5-flash")
 
 app = FastAPI(title="Food Diary", version="1.0.0")
 
@@ -238,6 +246,61 @@ def export_json():
         media_type="application/json",
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
+
+# ── AI Analysis (Google Gemini) ────────────────────────────────────────────────
+@app.post("/api/analyze-food-image")
+async def analyze_food_image(file: UploadFile = File(...)):
+    if not GEMINI_KEY:
+        raise HTTPException(500, "GEMINI_API_KEY non configurata")
+    
+    contents = await file.read()
+    b64_image = base64.b64encode(contents).decode('utf-8')
+    
+    prompt = (
+        "Analizza questa immagine di cibo e identifica il piatto. "
+        "Restituisci un JSON con questi campi: "
+        "'food' (nome del cibo in italiano), "
+        "'quantity' (stima porzione, es. '1 piatto', '100g'), "
+        "'cat' (una tra: colazione, pranzo, snack, cena, dopocena)."
+    )
+    
+    # Gemini v1beta logic
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
+    
+    headers = {
+        "Content-Type": "application/json",
+        "X-goog-api-key": GEMINI_KEY,
+        "User-Agent": "curl/7.81.0"
+    }
+    
+    payload = {
+        "contents": [{
+            "parts": [
+                {"text": prompt},
+                {
+                    "inlineData": {
+                        "mimeType": "image/jpeg",
+                        "data": b64_image
+                    }
+                }
+            ]
+        }],
+        "generationConfig": {
+            "responseMimeType": "application/json"
+        }
+    }
+    
+    async with httpx.AsyncClient() as client:
+        try:
+            resp = await client.post(url, json=payload, headers=headers, timeout=60.0)
+            resp.raise_for_status()
+            data = resp.json()
+            
+            # Estrai il testo JSON dalla risposta di Gemini
+            text_resp = data["candidates"][0]["content"]["parts"][0]["text"]
+            return json.loads(text_resp)
+        except Exception as e:
+            raise HTTPException(500, f"Errore Gemini AI: {str(e)}")
 
 # ── Favicon & Manifest ────────────────────────────────────────────────────────
 @app.get("/favicon.ico")
