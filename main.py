@@ -98,7 +98,7 @@ def list_entries(
     with db_conn() as conn:
         if date:
             rows = conn.execute(
-                "SELECT * FROM entries WHERE ts LIKE ? ORDER BY ts ASC LIMIT ?",
+                "SELECT * FROM entries WHERE ts LIKE ? ORDER BY ts DESC LIMIT ?",
                 (f"{date}%", limit)
             ).fetchall()
         else:
@@ -180,6 +180,22 @@ def search_foods(q: str = Query("", min_length=0)):
                 "SELECT name FROM foods ORDER BY name ASC LIMIT 30"
             ).fetchall()
         return [r["name"] for r in rows]
+ 
+@app.get("/api/quantities")
+def search_quantities(q: str = Query("", min_length=0)):
+    q = q.strip()
+    with db_conn() as conn:
+        if q:
+            pattern = f"%{q}%"
+            rows = conn.execute(
+                "SELECT DISTINCT notes FROM entries WHERE notes LIKE ? AND notes != '' ORDER BY notes ASC LIMIT 30",
+                (pattern,)
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT DISTINCT notes FROM entries WHERE notes != '' ORDER BY notes ASC LIMIT 30"
+            ).fetchall()
+        return [r["notes"] for r in rows]
 
 @app.delete("/api/foods/{name}", status_code=204)
 def delete_food(name: str):

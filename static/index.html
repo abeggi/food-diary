@@ -88,9 +88,9 @@
   }
   .logo {
     font-family: var(--mono);
-    font-size: 14px;
-    font-weight: 500;
-    letter-spacing: .06em;
+    font-size: 19px;
+    font-weight: 600;
+    letter-spacing: .02em;
     color: var(--accent);
     flex-shrink: 0;
   }
@@ -527,7 +527,10 @@
       </div>
       <div>
         <label class="form-label" for="inp-notes">quantità</label>
-        <input type="text" id="inp-notes" placeholder="es. 100gr o 1 piatto">
+        <div class="input-wrap">
+          <input type="text" id="inp-notes" placeholder="es. 100gr o 1 piatto" autocomplete="off">
+          <div class="autocomplete-list" id="ac-list-notes"></div>
+        </div>
       </div>
       <div>
         <label class="form-label">pasto</label>
@@ -623,19 +626,22 @@ document.addEventListener('DOMContentLoaded', () => {
   setNow();
   loadAll();
 
-  const foodInput = document.getElementById('inp-food');
-  foodInput.addEventListener('input', onFoodInput);
-  foodInput.addEventListener('keydown', onFoodKeydown);
-  foodInput.addEventListener('blur', () => setTimeout(hideAc, 150));
+  document.getElementById('inp-notes').addEventListener('input', onNotesInput);
+  document.getElementById('inp-notes').addEventListener('keydown', onNotesKeydown);
+  document.getElementById('inp-notes').addEventListener('blur', () => setTimeout(hideNotesAc, 150));
+
+  document.getElementById('inp-food').addEventListener('input', onFoodInput);
+  document.getElementById('inp-food').addEventListener('keydown', onFoodKeydown);
+  document.getElementById('inp-food').addEventListener('blur', () => setTimeout(hideAc, 150));
 
   document.getElementById('inp-ts').addEventListener('keydown', e => {
-    if (e.key === 'Enter') foodInput.focus();
+    if (e.key === 'Enter') document.getElementById('inp-food').focus();
   });
-  foodInput.addEventListener('keydown', e => {
-    if (e.key === 'Enter' && acIndex < 0) addEntry();
+  document.getElementById('inp-food').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && acIndex < 0) document.getElementById('inp-notes').focus();
   });
   document.getElementById('inp-notes').addEventListener('keydown', e => {
-    if (e.key === 'Enter') addEntry();
+    if (e.key === 'Enter' && acIndex < 0) addEntry();
   });
 });
 
@@ -721,7 +727,7 @@ function renderDay(d) {
   document.getElementById('main-date').textContent = formatDayFull(d);
   const entries = allEntries
     .filter(e => e.ts.slice(0, 10) === d)
-    .sort((a, b) => a.ts.localeCompare(b.ts));
+    .sort((a, b) => b.ts.localeCompare(a.ts));
 
   const countStr = entries.length ? `(${entries.length})` : '';
   document.getElementById('main-count').textContent = countStr;
@@ -883,7 +889,7 @@ function cancelEdit(id) {
   renderDay(currentDate);
 }
 
-// ── Autocomplete ──────────────────────────────────────────────────────────────
+// ── Autocomplete (Food) ───────────────────────────────────────────────────────
 function onFoodInput() {
   clearTimeout(acDebounce);
   acDebounce = setTimeout(fetchAc, 120);
@@ -893,13 +899,16 @@ async function fetchAc() {
   const q = document.getElementById('inp-food').value;
   try {
     acResults = await api('GET', `/api/foods?q=${encodeURIComponent(q)}`);
-    renderAc(q);
+    renderAc(q, 'ac-list', 'inp-food', pickAc);
   } catch {}
 }
 
-function renderAc(q) {
-  const list = document.getElementById('ac-list');
-  if (!acResults.length) { hideAc(); return; }
+function renderAc(q, listId, inputId, pickFn) {
+  const list = document.getElementById(listId);
+  if (!acResults.length) { 
+    if (listId==='ac-list') hideAc(); else hideNotesAc(); 
+    return; 
+  }
   acIndex = -1;
   list.innerHTML = '';
 
@@ -932,7 +941,7 @@ function renderAc(q) {
       }
     }
 
-    item.addEventListener('mousedown', () => pickAc(name));
+    item.addEventListener('mousedown', () => pickFn(name));
     list.appendChild(item);
   });
   list.classList.add('visible');
@@ -946,6 +955,7 @@ function pickAc(name) {
 
 function hideAc() {
   document.getElementById('ac-list').classList.remove('visible');
+  if (document.getElementById('ac-list-notes').classList.contains('visible')) return;
   acResults = [];
   acIndex   = -1;
 }
@@ -967,6 +977,52 @@ function onFoodKeydown(e) {
     pickAc(acResults[acIndex]);
   } else if (e.key === 'Escape') {
     hideAc();
+  }
+}
+
+// ── Autocomplete (Quantity/Notes) ─────────────────────────────────────────────
+function onNotesInput() {
+  clearTimeout(acDebounce);
+  acDebounce = setTimeout(fetchNotesAc, 120);
+}
+
+async function fetchNotesAc() {
+  const q = document.getElementById('inp-notes').value;
+  try {
+    acResults = await api('GET', `/api/quantities?q=${encodeURIComponent(q)}`);
+    renderAc(q, 'ac-list-notes', 'inp-notes', pickNotesAc);
+  } catch {}
+}
+
+function pickNotesAc(name) {
+  document.getElementById('inp-notes').value = name;
+  hideNotesAc();
+}
+
+function hideNotesAc() {
+  document.getElementById('ac-list-notes').classList.remove('visible');
+  if (document.getElementById('ac-list').classList.contains('visible')) return;
+  acResults = [];
+  acIndex   = -1;
+}
+
+function onNotesKeydown(e) {
+  const list  = document.getElementById('ac-list-notes');
+  const items = list.querySelectorAll('.ac-item');
+  if (!items.length) return;
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    acIndex = Math.min(acIndex + 1, items.length - 1);
+    items.forEach((el, i) => el.classList.toggle('selected', i === acIndex));
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    acIndex = Math.max(acIndex - 1, -1);
+    items.forEach((el, i) => el.classList.toggle('selected', i === acIndex));
+  } else if (e.key === 'Enter' && acIndex >= 0) {
+    e.preventDefault();
+    pickNotesAc(acResults[acIndex]);
+  } else if (e.key === 'Escape') {
+    hideNotesAc();
   }
 }
 
