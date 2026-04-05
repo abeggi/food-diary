@@ -807,20 +807,20 @@ async function scanFood(input) {
     
     data = await resp.json();
     
-    // Se non viene restituito un cibo, consideralo un fallimento del riconoscimento
-    if (!data || !data.food) {
-      toast('Riconoscimento fallito: cibo non identificato.', 'err');
+    // Se l'AI esplicitamente segnala un errore o restituisce un testo negativo (es. "Nessun alimento rilevato")
+    if (data.error || !data.food || data.food.toLowerCase().includes('nessun') || data.food.toLowerCase().includes('non ')) {
+      alert('Nessun cibo rilevato');
       return;
     }
     
-    // Popola campi
+    // Popola campi solo se l'identificazione è riuscita
     document.getElementById('inp-food').value = data.food;
     if (data.quantity) document.getElementById('inp-notes').value = data.quantity;
     if (data.cat) selectCat(data.cat, 'add');
     
     toast('Cibo identificato!', 'ok');
   } catch(e) {
-    toast('Errore: ' + e.message, 'err');
+    alert('Errore riconoscimento cibo: ' + e.message);
   } finally {
     overlay.style.display = 'none';
     input.value = ''; 

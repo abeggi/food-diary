@@ -273,8 +273,9 @@ async def analyze_food_image(file: UploadFile = File(...)):
     b64_image = base64.b64encode(contents).decode('utf-8')
     
     prompt = (
-        "Analizza questa immagine di cibo e identifica il piatto. "
-        "Restituisci un JSON con questi campi: "
+        "Analizza questa immagine. Se l'immagine non contiene cibo riconoscibile, "
+        "restituisci esclusivamente questo JSON: {\"error\": \"no_food\"}\n"
+        "Altrimenti, identifica il piatto e restituisci un JSON con questi campi: "
         "'food' (nome del cibo in italiano), "
         "'quantity' (stima porzione, es. '1 piatto', '100g'), "
         "'cat' (una tra: colazione, pranzo, snack, cena, dopocena)."
