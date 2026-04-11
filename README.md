@@ -15,12 +15,13 @@ Web app personale per tracciare i pasti giornalieri, ottimizzata per uso desktop
 - **Navigazione Intelligente**: Selezione del giorno tramite menu a discesa compatto (ottimo per gestire molti mesi di dati).
 - **Modifica e Sicurezza**: Modifica inline delle voci e conferma prima dell'eliminazione per evitare errori.
 - **PWA & Mobile Ready**: Supporto completo per l'installazione su smartphone (Apple Touch Icon e Web Manifest), icona personalizzata nella home.
-- **Autocomplete**: Suggerimenti cibi basati sullo storico con ricerca substring.
-- **Area Impostazioni**: Pagina separata per l'esportazione dati e la gestione massiva del diario:
-  - Tabella completa del database con ricerca testuale integrata per filtri rapidi.
-  - Modifica o eliminazione di qualunque voce dello storico direttamente in tabella.
-  - **Export CSV (Excel Ready)**: Ottimizzato per Excel IT (delimitatore `;`, encoding UTF-8 con BOM per le accentate, campi data e ora separati).
-  - **Export JSON**: Dump completo dei dati in formato standard.
+- **Autocomplete**: Suggerimenti intelligenti basati sullo storico sia per i **cibi** che per le **quantità** (note), con ricerca substring.
+- **Area Impostazioni**: Pagina dedicata per l'esportazione dati e la manutenzione avanzata del diario:
+  - **Ricerca Ottimizzata**: Database filtrabile al volo, con caricamento dei risultati solo su ricerca per prestazioni ottimali.
+  - **Gestione Storico**: Modifica o eliminazione di qualunque voce direttamente in tabella.
+  - **Catalogo Suggerimenti**: Gestione granulare dei nomi cibo proposti dall'autocomplete (ricerca ed eliminazione di voci errate).
+  - **Export CSV (Excel Ready)**: Ottimizzato per Excel IT (delimitatore `;`, encoding UTF-8 con BOM, campi data e ora separati).
+  - **Export JSON**: Dump completo dei dati in formato standard per backup o migrazioni.
 
 ## Architettura
 
