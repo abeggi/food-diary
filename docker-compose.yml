@@ -1,0 +1,11 @@
+services:
+  food-diary:
+    image: abeggi/food-diary:latest
+    container_name: food-diary
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/app/data
+    env_file:
+      - .env
+    restart: unless-stopped

@@ -4,8 +4,9 @@ Web app personale per tracciare i pasti giornalieri, ottimizzata per uso desktop
 
 - **Backend**: FastAPI + SQLite
 - **Frontend**: HTML/CSS/JS (single page, dark theme, premium aesthetics)
-- **Runtime**: `uvicorn` gestito con `systemd`
+- **Runtime**: `uvicorn` (systemd o Docker)
 - **Porta di default**: `8080`
+- **Docker Image**: `abeggi/food-diary:latest`
 
 ## Funzionalità
 
@@ -30,25 +31,35 @@ food-diary/
 ├── main.py              # API FastAPI, logica DB, migrazioni, export, AI
 ├── requirements.txt     # dipendenze Python (FastAPI, uvicorn, httpx, python-dotenv)
 ├── .env                 # configurazione API Key (Gemini)
+├── Dockerfile           # configurazione per immagine Docker
+├── docker-compose.yml   # orchestrazione container e volumi
 ├── static/
 │   ├── index.html       # frontend client (app principale)
 │   └── settings.html    # pagina impostazioni (gestione database ed export)
-├── install.sh           # installer automatico per host Linux
+├── install.sh           # installer automatico per host Linux (systemd)
 ├── food-diary.service   # unit file per systemd
 ├── food-diary-ctl       # script di gestione (start/stop/logs)
-└── data/                # cartella database (auto-generata)
-    └── food_diary.db
+├── data/                # cartella database (auto-generata o volume Docker)
+│   └── food_diary.db
 ```
 
 `main.py` gestisce automaticamente l'inizializzazione del database e le migrazioni (es. aggiunta colonne come `cat`) all'avvio.
 
 ## Installazione Rapida
 
-Vedere il file `install.sh` per i dettagli o eseguire:
+### 1. Metodo Standard (Systemd)
+Eseguire:
 ```bash
 sudo bash install.sh
 ```
 L'installer configurerà il virtualenv in `/opt/food-diary/venv` e avvierà il servizio systemd.
+
+### 2. Metodo Docker (Consigliato)
+Assicurarsi di avere un file `.env` configurato e avviare con Compose:
+```bash
+docker-compose up -d
+```
+L'immagine verrà scaricata automaticamente da `abeggi/food-diary`. I dati saranno persistenti nella cartella `./data`.
 
 ## Gestione Servizio
 
