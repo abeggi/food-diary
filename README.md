@@ -16,9 +16,11 @@ Web app personale per tracciare i pasti giornalieri, ottimizzata per uso desktop
 - **Modifica e Sicurezza**: Modifica inline delle voci e conferma prima dell'eliminazione per evitare errori.
 - **PWA & Mobile Ready**: Supporto completo per l'installazione su smartphone (Apple Touch Icon e Web Manifest), icona personalizzata nella home.
 - **Autocomplete**: Suggerimenti cibi basati sullo storico con ricerca substring.
-- **Export Avanzato**: 
-  - **CSV (Excel Ready)**: Ottimizzato per Excel IT (delimitatore `;`, encoding UTF-8 con BOM per le accentate, campi data e ora separati).
-  - **JSON**: Dump completo dei dati in formato standard.
+- **Area Impostazioni**: Pagina separata per l'esportazione dati e la gestione massiva del diario:
+  - Tabella completa del database con ricerca testuale integrata per filtri rapidi.
+  - Modifica o eliminazione di qualunque voce dello storico direttamente in tabella.
+  - **Export CSV (Excel Ready)**: Ottimizzato per Excel IT (delimitatore `;`, encoding UTF-8 con BOM per le accentate, campi data e ora separati).
+  - **Export JSON**: Dump completo dei dati in formato standard.
 
 ## Architettura
 
@@ -28,7 +30,8 @@ food-diary/
 ├── requirements.txt     # dipendenze Python (FastAPI, uvicorn, httpx, python-dotenv)
 ├── .env                 # configurazione API Key (Gemini)
 ├── static/
-│   └── index.html       # frontend SPA (markup, stile, logica client)
+│   ├── index.html       # frontend client (app principale)
+│   └── settings.html    # pagina impostazioni (gestione database ed export)
 ├── install.sh           # installer automatico per host Linux
 ├── food-diary.service   # unit file per systemd
 ├── food-diary-ctl       # script di gestione (start/stop/logs)

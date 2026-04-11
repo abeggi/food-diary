@@ -347,3 +347,9 @@ def index():
     html_path = os.path.join(BASE_DIR, "static", "index.html")
     with open(html_path, "r", encoding="utf-8") as f:
         return f.read()
+
+@app.get("/settings", response_class=HTMLResponse)
+def settings():
+    html_path = os.path.join(BASE_DIR, "static", "settings.html")
+    with open(html_path, "r", encoding="utf-8") as f:
+        return f.read()
