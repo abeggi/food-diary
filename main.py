@@ -26,6 +26,7 @@ DB_PATH  = os.environ.get("FOOD_DIARY_DB", os.path.join(BASE_DIR, "food_diary.db
 GEMINI_KEY    = os.environ.get("GEMINI_API_KEY", "")
 GEMINI_MODEL  = os.environ.get("GEMINI_MODEL", "gemini-1.5-flash")
 ADMIN_EMAIL   = os.environ.get("ADMIN_EMAIL", "abeggi@gmail.com")
+DEV_MODE      = os.environ.get("DEV_MODE", "false").lower() == "true"
 
 # Firebase admin init
 FIREBASE_SACC_PATH = os.environ.get("FIREBASE_SERVICE_ACCOUNT")
@@ -41,24 +42,25 @@ elif os.environ.get("FIREBASE_SERVICE_ACCOUNT_JSON"):
     cred = credentials.Certificate(f_path)
     firebase_admin.initialize_app(cred)
 else:
-    # Modalità sviluppo senza firebase service account
-    print("Warning: FIREBASE_SERVICE_ACCOUNT non configurato. Autenticazione disattivata.")
+    if DEV_MODE:
+        print("Warning: DEV_MODE attivo. FIREBASE non configurato. Autenticazione MOCK attivata.")
+    else:
+        raise RuntimeError("CRITICAL SEC ERROR: Firebase non configurato. Impossibile avviare in produzione senza protezione.")
 
 app = FastAPI(title="Food Diary", version="1.0.0")
 
 # ── Auth Dependency ──────────────────────────────────────────────────────────
 async def get_current_user(authorization: Optional[str] = Header(None)):
-    """Estrae e verifica il token Firebase, o restituisce un utente mock in dev mode."""
+    """Estrae e verifica il token Firebase."""
     if not authorization:
-        # Se non c'è header, in modalità dev usiamo un utente di default
-        if not firebase_admin._apps:
+        if not firebase_admin._apps and DEV_MODE:
             return "dev_user"
         raise HTTPException(401, "Missing authorization header")
     
     token = authorization.replace("Bearer ", "")
     try:
-        if not firebase_admin._apps:
-             return "dev_user" # fallback anche se il token c'è ma firebase non è init
+        if not firebase_admin._apps and DEV_MODE:
+             return "dev_user"
         decoded_token = auth.verify_id_token(token)
         user_email = decoded_token.get('email', '')
         
@@ -79,8 +81,8 @@ async def get_current_user(authorization: Optional[str] = Header(None)):
 
 async def get_admin_user(authorization: Optional[str] = Header(None)):
     """Verifica che l'utente sia un amministratore."""
-    if not authorization and not firebase_admin._apps:
-        return "dev_user" # admin in dev mode
+    if not authorization and not firebase_admin._apps and DEV_MODE:
+        return "dev_user" 
     
     token = (authorization or "").replace("Bearer ", "")
     try:
@@ -96,7 +98,7 @@ async def get_admin_user(authorization: Optional[str] = Header(None)):
 @app.get("/api/me")
 async def get_me(authorization: Optional[str] = Header(None)):
     """Restituisce info sull'utente corrente (inclusi i ruoli)."""
-    if not authorization and not firebase_admin._apps:
+    if not authorization and not firebase_admin._apps and DEV_MODE:
         return {"uid": "dev_user", "email": "dev@local", "is_admin": True}
     
     token = authorization.replace("Bearer ", "")
@@ -128,7 +130,7 @@ async def get_me(authorization: Optional[str] = Header(None)):
 @app.get("/api/admin/users")
 def admin_list_users(admin_id: str = Depends(get_admin_user)):
     """Elenca utenti Firebase con stato whitelist."""
-    if not firebase_admin._apps:
+    if not firebase_admin._apps and DEV_MODE:
         return [{"uid": "dev_user", "email": "dev@local", "display_name": "Dev User", "is_allowed": True}]
     
     with db_conn() as conn:
@@ -151,8 +153,7 @@ def admin_list_users(admin_id: str = Depends(get_admin_user)):
 @app.delete("/api/admin/users/{uid}", status_code=204)
 def admin_delete_user(uid: str, admin_id: str = Depends(get_admin_user)):
     """Elimina definitivamente un utente da Firebase e rimuove i suoi dati dal DB."""
-    if not firebase_admin._apps:
-        # Dev mode mock delete
+    if not firebase_admin._apps and DEV_MODE:
         return
         
     try:
