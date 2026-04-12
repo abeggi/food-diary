@@ -88,6 +88,18 @@
   .btn-login-big:hover { background-color: #f8f9fa; transform: none; }
   .btn-login-big svg { width: 20px; height: 20px; }
 
+  #forbidden-wall {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    padding: 20px;
+    text-align: center;
+  }
+  #forbidden-wall h1 { color: var(--red); font-size: 24px; margin-bottom: 16px; }
+  #forbidden-wall p { color: var(--text-dim); line-height: 1.6; max-width: 400px; margin-bottom: 24px; }
+
   /* ── Layout ── */
   .shell {
     display: none; /* Hidden until auth state confirmed */
@@ -401,6 +413,12 @@
   </button>
 </div>
 
+<div id="forbidden-wall">
+  <h1>Accesso non autorizzato</h1>
+  <p id="forbidden-message">Caricamento...</p>
+  <button class="btn-ghost" onclick="logout()">Esci e prova un altro account</button>
+</div>
+
 <div class="shell" id="app-shell">
   <!-- Header -->
   <header>
@@ -444,11 +462,21 @@
       </div>
     </section>
 
-    <!-- Admin Section -->
+    <!-- Whitelist & Admin Section -->
     <section id="admin-section" style="display:none;">
-      <h2 class="section-title">Gestione Utenti (Admin)</h2>
+      <h2 class="section-title">Gestione Utenti & Accessi</h2>
+      
+      <!-- Pre-autorizzazione -->
+      <div id="whitelist-preauth" style="margin-bottom: 24px;">
+        <p style="color: var(--text-dim); font-size: 13px; margin-bottom: 8px;">Pre-autorizza una nuova email:</p>
+        <div style="display: flex; gap: 8px;">
+          <input type="email" id="inp-whitelist-email" placeholder="email@gmail.com" style="flex:1; font-family:var(--mono); font-size:13px; padding: 8px; background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius); color:var(--text);">
+          <button class="btn-ghost" onclick="addToWhitelist()">Abilita</button>
+        </div>
+      </div>
+
       <div id="users-list-wrap">
-        <p style="color: var(--text-dim); font-size: 13px; margin-bottom: 12px;">Elenco di tutti gli utenti registrati nel sistema.</p>
+        <p style="color: var(--text-dim); font-size: 13px; margin-bottom: 12px;">Elenco utenti registrati:</p>
         <div class="entries-wrap" id="users-list">
           <div style="text-align: center; color: var(--text-dim); padding: 20px; font-family: var(--mono);">Caricamento utenti...</div>
         </div>
@@ -464,6 +492,7 @@ let allEntries = [];
 let allFoods = [];
 let editingId = null;
 let currentUserToken = null;
+let adminEmail = 'abeggi@gmail.com';
 
 // ── Auth Logic ──────────────────────────────────────────────────────────────
 async function login() {
@@ -475,7 +504,10 @@ async function login() {
 }
 
 async function logout() {
-  if (firebaseAuth) await firebaseAuth.signOut();
+  if (firebaseAuth) {
+    await firebaseAuth.signOut();
+    window.location.href = '/';
+  }
 }
 
 if (firebaseAuth) {
@@ -493,16 +525,32 @@ if (firebaseAuth) {
       userInfo.textContent = user.displayName || user.email;
       userInfo.style.display = 'block';
       authWall.style.display = 'none';
-      appShell.style.display = 'flex';
       
-      // Controllo admin
+      // Controllo autorizzazione
       try {
         const me = await api('GET', '/api/me');
+        
+        // Se arriviamo qui, l'utente è autorizzato
+        document.getElementById('forbidden-wall').style.display = 'none';
+        appShell.style.display = 'flex';
+        
+        adminEmail = me.email;
         if (me.is_admin) {
             document.getElementById('admin-section').style.display = 'block';
             loadUsers();
         }
-      } catch(e) {}
+        
+        loadAll(); // Carica i dati (db voci, suggerimenti) solo se autorizzato
+      } catch(e) {
+        if (e.status === 403) {
+            document.getElementById('forbidden-message').innerHTML = e.detail.replace('Accesso negato. ', '');
+            document.getElementById('forbidden-wall').style.display = 'flex';
+            appShell.style.display = 'none';
+            authWall.style.display = 'none';
+        } else {
+            toast('Errore: ' + e.message, 'err');
+        }
+      }
     } else {
       currentUserToken = null;
       loginBtn.style.display = 'block';
@@ -510,8 +558,8 @@ if (firebaseAuth) {
       userInfo.style.display = 'none';
       authWall.style.display = 'flex';
       appShell.style.display = 'none';
+      document.getElementById('forbidden-wall').style.display = 'none';
     }
-    if (user) loadAll();
   });
 } else {
   document.addEventListener('DOMContentLoaded', () => {
@@ -530,13 +578,12 @@ async function api(method, path, body) {
   const opts = { method, headers };
   if (body !== undefined) opts.body = JSON.stringify(body);
   const r = await fetch(path, opts);
-  if (r.status === 401) {
-    toast('Sessione scaduta o accesso negato', 'err');
-    return;
-  }
   if (!r.ok) {
     const err = await r.json().catch(() => ({detail: r.statusText}));
-    throw new Error(err.detail || r.statusText);
+    const error = new Error(err.detail || r.statusText);
+    error.status = r.status;
+    error.detail = err.detail || r.statusText;
+    throw error;
   }
   if (r.status === 204) return null;
   return r.json();
@@ -571,21 +618,55 @@ async function loadUsers() {
     wrap.innerHTML = users.map(u => `
       <div class="entry-row" style="grid-template-columns: 1fr auto auto;">
         <div>
-          <div style="font-weight: 500;">${esc(u.display_name || 'Utente senza nome')}</div>
+          <div style="font-weight: 500;">
+            ${esc(u.display_name || 'Utente senza nome')} 
+            <span style="font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-left:8px; background: ${u.is_allowed ? 'var(--accent-bg)' : 'var(--red-bg)'}; color: ${u.is_allowed ? 'var(--accent)' : 'var(--red)'}">
+              ${u.is_allowed ? 'ABILITATO' : 'DISABILITATO'}
+            </span>
+          </div>
           <div style="font-family: var(--mono); font-size: 11px; color: var(--text-dim);">${esc(u.email)}</div>
-          <div style="font-family: var(--mono); font-size: 10px; color: var(--text-faint);">UID: ${esc(u.uid)} ${u.email === 'abeggi@gmail.com' ? ' (Admin)' : ''}</div>
+          <div style="font-family: var(--mono); font-size: 10px; color: var(--text-faint);">UID: ${esc(u.uid)} ${u.email === adminEmail ? ' (Admin)' : ''}</div>
         </div>
         <div style="font-family: var(--mono); font-size: 11px; color: var(--text-dim); text-align: right; padding-top: 4px;">
-          Registrato: ${u.created ? u.created.slice(0, 10) : '—'}
+           ${u.created ? u.created.slice(0, 10) : '—'}
         </div>
-        <div class="entry-actions" style="opacity:1; padding-left: 12px;">
-          ${u.email !== 'abeggi@gmail.com' ? `<button class="btn-icon del" onclick="deleteUser('${u.uid}', '${escJs(u.email)}')" title="Elimina Utente">✕</button>` : ''}
+        <div class="entry-actions" style="opacity:1; padding-left: 12px; display:flex; gap: 8px;">
+          ${u.email !== adminEmail ? `
+            <button class="btn-ghost" style="font-size: 10px; border-color: ${u.is_allowed ? 'var(--red)' : 'var(--accent)'}; color: ${u.is_allowed ? 'var(--red)' : 'var(--accent)'}" 
+                    onclick="toggleUserStatus('${escJs(u.email)}', ${u.is_allowed})">
+              ${u.is_allowed ? 'Disabilita' : 'Abilita'}
+            </button>
+            <button class="btn-icon del" onclick="deleteUser('${u.uid}', '${escJs(u.email)}')" title="Elimina Utente">✕</button>
+          ` : ''}
         </div>
       </div>
     `).join('');
   } catch(e) {
     document.getElementById('users-list').innerHTML = `<div style="text-align: center; color: var(--red); padding: 20px; font-family: var(--mono);">Errore nel caricamento utenti admin.</div>`;
   }
+}
+
+async function toggleUserStatus(email, currentlyAllowed) {
+  try {
+    if (currentlyAllowed) {
+       await api('DELETE', `/api/admin/whitelist/${email}`);
+    } else {
+       await api('POST', '/api/admin/whitelist', { email });
+    }
+    toast('Stato aggiornato ✓', 'ok');
+    loadUsers();
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+async function addToWhitelist() {
+  const email = document.getElementById('inp-whitelist-email').value;
+  if (!email) return;
+  try {
+    await api('POST', '/api/admin/whitelist', { email });
+    document.getElementById('inp-whitelist-email').value = '';
+    toast('Email abilitata ✓', 'ok');
+    loadUsers();
+  } catch(e) { toast(e.message, 'err'); }
 }
 
 async function deleteUser(uid, email) {

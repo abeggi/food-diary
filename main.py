@@ -60,8 +60,21 @@ async def get_current_user(authorization: Optional[str] = Header(None)):
         if not firebase_admin._apps:
              return "dev_user" # fallback anche se il token c'è ma firebase non è init
         decoded_token = auth.verify_id_token(token)
+        user_email = decoded_token.get('email', '')
+        
+        # Check Admin
+        if user_email == ADMIN_EMAIL:
+            return decoded_token['uid']
+            
+        # Check Whitelist
+        with db_conn() as conn:
+            row = conn.execute("SELECT email FROM whitelist WHERE email = ?", (user_email,)).fetchone()
+            if not row:
+                raise HTTPException(403, f"Accesso negato. Invia una mail a {ADMIN_EMAIL} per richiedere l'abilitazione dell'account: {user_email}")
+                
         return decoded_token['uid']
     except Exception as e:
+        if isinstance(e, HTTPException): raise e
         raise HTTPException(401, f"Invalid token: {str(e)}")
 
 async def get_admin_user(authorization: Optional[str] = Header(None)):
@@ -89,20 +102,33 @@ async def get_me(authorization: Optional[str] = Header(None)):
     token = authorization.replace("Bearer ", "")
     try:
         decoded_token = auth.verify_id_token(token)
+        email = decoded_token.get('email', '')
+        
+        if email != ADMIN_EMAIL:
+            with db_conn() as conn:
+                row = conn.execute("SELECT email FROM whitelist WHERE email = ?", (email,)).fetchone()
+                if not row:
+                    raise HTTPException(403, f"Accesso negato. Invia una mail a {ADMIN_EMAIL} per richiedere l'abilitazione dell'account: {email}")
+
         return {
             "uid": decoded_token['uid'],
-            "email": decoded_token.get('email', ''),
-            "is_admin": decoded_token.get('email') == ADMIN_EMAIL
+            "email": email,
+            "is_admin": email == ADMIN_EMAIL
         }
-    except:
-        raise HTTPException(401)
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(401, f"Invalid token: {str(e)}")
 
 # ── Admin API ─────────────────────────────────────────────────────────────────
 @app.get("/api/admin/users")
 def admin_list_users(admin_id: str = Depends(get_admin_user)):
-    """Elenca tutti gli utenti registrati su Firebase (per l'admin)."""
+    """Elenca utenti Firebase con stato whitelist."""
     if not firebase_admin._apps:
-        return [{"uid": "dev_user", "email": "dev@local", "display_name": "Dev User"}]
+        return [{"uid": "dev_user", "email": "dev@local", "display_name": "Dev User", "is_allowed": True}]
+    
+    with db_conn() as conn:
+        allowed = {r["email"].lower() for r in conn.execute("SELECT email FROM whitelist").fetchall()}
     
     users = []
     page = auth.list_users()
@@ -112,7 +138,8 @@ def admin_list_users(admin_id: str = Depends(get_admin_user)):
                 "uid": user.uid,
                 "email": user.email,
                 "display_name": user.display_name,
-                "created": datetime.fromtimestamp(user.user_metadata.creation_timestamp / 1000).isoformat() if user.user_metadata.creation_timestamp else None
+                "created": datetime.fromtimestamp(user.user_metadata.creation_timestamp / 1000).isoformat() if user.user_metadata.creation_timestamp else None,
+                "is_allowed": user.email.lower() in allowed or user.email.lower() == ADMIN_EMAIL.lower()
             })
         page = page.get_next_page()
     return users
@@ -135,6 +162,29 @@ def admin_delete_user(uid: str, admin_id: str = Depends(get_admin_user)):
             
     except Exception as e:
         raise HTTPException(500, f"Errore durante l'eliminazione: {str(e)}")
+
+# ── Whitelist API ─────────────────────────────────────────────────────────────
+@app.get("/api/admin/whitelist")
+def get_whitelist(admin_id: str = Depends(get_admin_user)):
+    with db_conn() as conn:
+        rows = conn.execute("SELECT * FROM whitelist ORDER BY email ASC").fetchall()
+        return [dict(r) for r in rows]
+
+@app.post("/api/admin/whitelist", status_code=201)
+def add_to_whitelist(data: dict, admin_id: str = Depends(get_admin_user)):
+    email = data.get("email", "").strip().lower()
+    if not email: raise HTTPException(400, "Email mancante")
+    with db_conn() as conn:
+        conn.execute("INSERT OR IGNORE INTO whitelist (email) VALUES (?)", (email,))
+    return {"status": "ok"}
+
+@app.delete("/api/admin/whitelist/{email}")
+def remove_from_whitelist(email: str, admin_id: str = Depends(get_admin_user)):
+    if email.lower() == ADMIN_EMAIL.lower():
+        raise HTTPException(400, "Non puoi rimuovere l'amministratore dalla whitelist")
+    with db_conn() as conn:
+        conn.execute("DELETE FROM whitelist WHERE email = ?", (email.lower(),))
+    return {"status": "ok"}
 
 # ── DB ────────────────────────────────────────────────────────────────────────
 def get_db():
@@ -166,8 +216,15 @@ def init_db():
                 id      INTEGER PRIMARY KEY AUTOINCREMENT,
                 name    TEXT    NOT NULL COLLATE NOCASE
             );
+            CREATE TABLE IF NOT EXISTS whitelist (
+                email   TEXT PRIMARY KEY COLLATE NOCASE,
+                added   TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+            );
         """)
         # Migrations (Add columns if missing)
+        try:
+            conn.execute("INSERT OR IGNORE INTO whitelist (email) VALUES (?)", (ADMIN_EMAIL,))
+        except: pass
         try:
             conn.execute("ALTER TABLE entries ADD COLUMN cat TEXT DEFAULT ''")
         except sqlite3.OperationalError: pass
