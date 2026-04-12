@@ -25,7 +25,9 @@ DB_PATH  = os.environ.get("FOOD_DIARY_DB", os.path.join(BASE_DIR, "food_diary.db
 # AI config (Google Gemini)
 GEMINI_KEY    = os.environ.get("GEMINI_API_KEY", "")
 GEMINI_MODEL  = os.environ.get("GEMINI_MODEL", "gemini-1.5-flash")
-ADMIN_EMAIL   = os.environ.get("ADMIN_EMAIL", "abeggi@gmail.com")
+ADMIN_EMAIL   = os.environ.get("ADMIN_EMAIL")
+if not ADMIN_EMAIL:
+    raise RuntimeError("CRITICAL SEC ERROR: Variabile d'ambiente ADMIN_EMAIL non configurata.")
 DEV_MODE      = os.environ.get("DEV_MODE", "false").lower() == "true"
 
 # Firebase admin init
