@@ -394,7 +394,7 @@ def export_json(user_id: str = Depends(get_current_user)):
 
 # ── AI Analysis (Google Gemini) ────────────────────────────────────────────────
 @app.post("/api/analyze-food-image")
-async def analyze_food_image(file: UploadFile = File(...), user_id: str = Depends(get_current_user)):
+async def analyze_food_image(file: UploadFile = File(...), admin_id: str = Depends(get_admin_user)):
     if not GEMINI_KEY:
         raise HTTPException(500, "GEMINI_API_KEY non configurata")
     

@@ -581,7 +581,7 @@
         <label class="form-label" for="inp-food">cosa</label>
         <div class="input-with-icon">
           <input type="text" id="inp-food" placeholder="es. pasta al pesto" autocomplete="off">
-          <span class="btn-scan" onclick="document.getElementById('cam-input').click()" title="Scansiona cibo">📷</span>
+          <span class="btn-scan" id="btn-scan" onclick="document.getElementById('cam-input').click()" title="Scansiona cibo" style="display:none">📷</span>
           <div class="autocomplete-list" id="ac-list"></div>
         </div>
         <input type="file" id="cam-input" accept="image/*" capture="camera" style="display:none" onchange="scanFood(this)">
@@ -675,6 +675,17 @@ if (firebaseAuth) {
       userInfo.style.display = 'block';
       authWall.style.display = 'none';
       appShell.style.display = isMobile() ? 'flex' : 'grid';
+
+      // Controllo admin per AI Scanner
+      try {
+        const me = await api('GET', '/api/me');
+        const photoBtn = document.getElementById('btn-scan');
+        if (me.is_admin) {
+            if (photoBtn) photoBtn.style.display = 'inline-block';
+        } else {
+            if (photoBtn) photoBtn.style.display = 'none';
+        }
+      } catch(e) {}
     } else {
       currentUserToken = null;
       loginBtn.style.display = 'block';
@@ -682,6 +693,8 @@ if (firebaseAuth) {
       userInfo.style.display = 'none';
       authWall.style.display = 'flex';
       appShell.style.display = 'none';
+      const photoBtn = document.getElementById('btn-scan');
+      if (photoBtn) photoBtn.style.display = 'none';
     }
     if (user) loadAll();
   });
