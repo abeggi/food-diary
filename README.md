@@ -81,8 +81,40 @@ Nelle **Impostazioni**, l'admin ha accesso a un pannello integrato per:
 
 *Nota:* Per ragioni di sicurezza e contenimento dei costi API, il modulo **AI Food Scanner** è disponibile esclusivamente per l'account Amministratore.
 
-## Sicurezza e Privacy
+## Sicurezza
 
-Tutti i dati sensibili (`.env`, `firebase-config.js`, `food_diary.db`) sono inseriti nel `.gitignore` per evitare fughe di dati su repository pubblici. 
+L'applicazione è stata sottoposta a un audit di sicurezza completo. Le seguenti misure sono attive:
 
-Per lo sviluppo, è disponibile un file `static/firebase-config.js.example` come template.
+- **Fail-Closed Architecture**: Se Firebase non è configurato correttamente, l'applicazione **rifiuta di avviarsi** in produzione. Nessun bypass silenzioso.
+- **DEV_MODE Esplicito**: Le modalità di sviluppo (utente mock, auth disattivata) sono accessibili **solo** impostando `DEV_MODE=true` come variabile d'ambiente. Il default è `false`.
+- **Rate Limiting**: Tutti gli endpoint sensibili sono protetti con `slowapi`:
+  - Auth (`/api/me`): 30 req/min
+  - Admin: 10 req/min
+  - Scrittura: 20 req/min
+  - AI Scanner: 5 req/min
+- **Token Auto-Refresh**: I token Firebase vengono rinnovati automaticamente in background tramite `onIdTokenChanged`, prevenendo errori 401 dopo 60 minuti.
+- **Credenziali In-Memory**: Il Service Account JSON viene caricato direttamente in memoria (`json.loads`), senza mai scrivere file temporanei su disco.
+- **Nessun Secret nel Codice**: `ADMIN_EMAIL`, `FIREBASE_SERVICE_ACCOUNT_JSON` e `GEMINI_API_KEY` sono obbligatori come variabili d'ambiente. Nessun valore di default è presente nel codice sorgente.
+- **Git Safety**: `.gitignore` esclude `*.db`, `*.db-shm`, `*.db-wal`, `.env`, `firebase-config.js` e `migrate_user.py`.
+
+Per lo sviluppo locale, è disponibile un file `static/firebase-config.js.example` come template.
+
+## Deploy con Docker
+
+```bash
+docker run -d \
+  --name food-diary \
+  -p 8080:8080 \
+  -v ./data:/app/data \
+  -v ./static/firebase-config.js:/app/static/firebase-config.js:ro \
+  -e ADMIN_EMAIL=tua_email@gmail.com \
+  -e FIREBASE_SERVICE_ACCOUNT_JSON='{ ... }' \
+  -e GEMINI_API_KEY=tua_chiave \
+  abeggi/food-diary:latest
+```
+
+Oppure con `docker-compose`:
+```bash
+docker compose up -d
+```
+(Assicurarsi che `.env` e `static/firebase-config.js` siano presenti nella directory.)
