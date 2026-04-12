@@ -953,6 +953,12 @@
     }
 
     if (firebaseAuth) {
+      // Auto-refresh del token ogni volta che Firebase lo rinnova (ogni ~55 min)
+      firebaseAuth.onIdTokenChanged(async (user) => {
+        if (user) currentUserToken = await user.getIdToken();
+        else currentUserToken = null;
+      });
+
       firebaseAuth.onAuthStateChanged(async (user) => {
         const loginBtn = document.getElementById('login-btn');
         const logoutBtn = document.getElementById('logout-btn');
@@ -1234,6 +1240,7 @@
       try {
         const resp = await fetch('/api/analyze-food-image', {
           method: 'POST',
+          headers: { 'Authorization': `Bearer ${currentUserToken}` },
           body: formData
         });
 

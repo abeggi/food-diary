@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Query, UploadFile, File
+from fastapi import FastAPI, HTTPException, Query, UploadFile, File, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, StreamingResponse, FileResponse
 from pydantic import BaseModel
@@ -16,6 +16,9 @@ from dotenv import load_dotenv
 import firebase_admin
 from firebase_admin import credentials, auth
 from fastapi import Depends, Header
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 # ── Config ────────────────────────────────────────────────────────────────────
 load_dotenv()
@@ -36,101 +39,77 @@ if FIREBASE_SACC_PATH and os.path.exists(FIREBASE_SACC_PATH):
     cred = credentials.Certificate(FIREBASE_SACC_PATH)
     firebase_admin.initialize_app(cred)
 elif os.environ.get("FIREBASE_SERVICE_ACCOUNT_JSON"):
-    # Carica da stringa JSON (utile per Docker/Env)
-    import tempfile
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
-        f.write(os.environ.get("FIREBASE_SERVICE_ACCOUNT_JSON"))
-        f_path = f.name
-    cred = credentials.Certificate(f_path)
-    firebase_admin.initialize_app(cred)
+    # Carica da stringa JSON (utile per Docker/Env) in memoria, nessun file temporaneo su disco.
+    try:
+        cert_dict = json.loads(os.environ.get("FIREBASE_SERVICE_ACCOUNT_JSON"))
+        cred = credentials.Certificate(cert_dict)
+        firebase_admin.initialize_app(cred)
+    except json.JSONDecodeError:
+        raise RuntimeError("CRITICAL SEC ERROR: FIREBASE_SERVICE_ACCOUNT_JSON non è un JSON valido.")
 else:
     if DEV_MODE:
         print("Warning: DEV_MODE attivo. FIREBASE non configurato. Autenticazione MOCK attivata.")
     else:
         raise RuntimeError("CRITICAL SEC ERROR: Firebase non configurato. Impossibile avviare in produzione senza protezione.")
 
+# ── Rate Limiter ─────────────────────────────────────────────────────────────
+limiter = Limiter(key_func=get_remote_address)
+
 app = FastAPI(title="Food Diary", version="1.0.0")
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # ── Auth Dependency ──────────────────────────────────────────────────────────
-async def get_current_user(authorization: Optional[str] = Header(None)):
-    """Estrae e verifica il token Firebase."""
+async def get_current_user_dict(authorization: Optional[str] = Header(None)) -> dict:
+    """Estrae e verifica il token Firebase, restituendo l'intero oggetto utente."""
     if not authorization:
         if not firebase_admin._apps and DEV_MODE:
-            return "dev_user"
+            return {"uid": "dev_user", "email": "dev@local", "is_admin": True}
         raise HTTPException(401, "Missing authorization header")
     
     token = authorization.replace("Bearer ", "")
     try:
         if not firebase_admin._apps and DEV_MODE:
-             return "dev_user"
+             return {"uid": "dev_user", "email": "dev@local", "is_admin": True}
         decoded_token = auth.verify_id_token(token)
         user_email = decoded_token.get('email', '')
-        
-        # Check Admin
-        if user_email == ADMIN_EMAIL:
-            return decoded_token['uid']
-            
-        # Check Whitelist
-        with db_conn() as conn:
-            row = conn.execute("SELECT email FROM whitelist WHERE email = ?", (user_email,)).fetchone()
-            if not row:
-                raise HTTPException(403, f"Accesso negato. Invia una mail a {ADMIN_EMAIL} per richiedere l'abilitazione dell'account: {user_email}")
-                
-        return decoded_token['uid']
-    except Exception as e:
-        if isinstance(e, HTTPException): raise e
-        raise HTTPException(401, f"Invalid token: {str(e)}")
-
-async def get_admin_user(authorization: Optional[str] = Header(None)):
-    """Verifica che l'utente sia un amministratore."""
-    if not authorization and not firebase_admin._apps and DEV_MODE:
-        return "dev_user" 
-    
-    token = (authorization or "").replace("Bearer ", "")
-    try:
-        decoded_token = auth.verify_id_token(token)
-        user_email = decoded_token.get('email', '')
-        if user_email == ADMIN_EMAIL:
-            return decoded_token['uid']
-        raise HTTPException(403, "Access denied: Admin only")
-    except Exception as e:
-        if isinstance(e, HTTPException): raise e
-        raise HTTPException(401, f"Invalid token: {str(e)}")
-
-@app.get("/api/me")
-async def get_me(authorization: Optional[str] = Header(None)):
-    """Restituisce info sull'utente corrente (inclusi i ruoli)."""
-    if not authorization and not firebase_admin._apps and DEV_MODE:
-        return {"uid": "dev_user", "email": "dev@local", "is_admin": True}
-    
-    token = authorization.replace("Bearer ", "")
-    try:
-        decoded_token = auth.verify_id_token(token)
-        email = decoded_token.get('email', '')
         uid = decoded_token['uid']
+        is_admin = (user_email == ADMIN_EMAIL)
         
         with db_conn() as conn:
-            if email != ADMIN_EMAIL:
-                row = conn.execute("SELECT email FROM whitelist WHERE email = ?", (email,)).fetchone()
+            if not is_admin:
+                row = conn.execute("SELECT email FROM whitelist WHERE email = ?", (user_email,)).fetchone()
                 if not row:
-                    raise HTTPException(403, f"Accesso negato. Invia una mail a {ADMIN_EMAIL} per richiedere l'abilitazione dell'account: {email}")
+                    raise HTTPException(403, f"Accesso negato. Invia una mail a {ADMIN_EMAIL} per richiedere l'abilitazione dell'account: {user_email}")
             
             # Aggiorna il DB locale per mantenere l'associazione Email -> Firebase UID
-            conn.execute("UPDATE whitelist SET user_id = ? WHERE email = ?", (uid, email))
+            conn.execute("UPDATE whitelist SET user_id = ? WHERE email = ?", (uid, user_email))
 
-        return {
-            "uid": uid,
-            "email": email,
-            "is_admin": email == ADMIN_EMAIL
-        }
-    except HTTPException as e:
-        raise e
+        return {"uid": uid, "email": user_email, "is_admin": is_admin}
     except Exception as e:
+        if isinstance(e, HTTPException): raise e
         raise HTTPException(401, f"Invalid token: {str(e)}")
+
+async def get_current_user(user: dict = Depends(get_current_user_dict)) -> str:
+    """Ritorna solo l'UID per compatibilità coi CRUD endpoints."""
+    return user["uid"]
+
+async def get_admin_user(user: dict = Depends(get_current_user_dict)) -> str:
+    """Verifica che l'utente sia un amministratore e ritorna l'UID."""
+    if not user.get("is_admin"):
+        raise HTTPException(403, "Access denied: Admin only")
+    return user["uid"]
+
+@app.get("/api/me")
+@limiter.limit("30/minute")
+async def get_me(request: Request, user: dict = Depends(get_current_user_dict)):
+    """Restituisce info sull'utente corrente (inclusi i ruoli)."""
+    return user
 
 # ── Admin API ─────────────────────────────────────────────────────────────────
 @app.get("/api/admin/users")
-def admin_list_users(admin_id: str = Depends(get_admin_user)):
+@limiter.limit("10/minute")
+def admin_list_users(request: Request, admin_id: str = Depends(get_admin_user)):
     """Elenca utenti Firebase con stato whitelist."""
     if not firebase_admin._apps and DEV_MODE:
         return [{"uid": "dev_user", "email": "dev@local", "display_name": "Dev User", "is_allowed": True}]
@@ -153,7 +132,8 @@ def admin_list_users(admin_id: str = Depends(get_admin_user)):
     return users
 
 @app.delete("/api/admin/users/{uid}", status_code=204)
-def admin_delete_user(uid: str, admin_id: str = Depends(get_admin_user)):
+@limiter.limit("10/minute")
+def admin_delete_user(request: Request, uid: str, admin_id: str = Depends(get_admin_user)):
     """Elimina definitivamente un utente da Firebase e rimuove i suoi dati dal DB."""
     if not firebase_admin._apps and DEV_MODE:
         return
@@ -187,7 +167,8 @@ def get_whitelist(admin_id: str = Depends(get_admin_user)):
         return [dict(r) for r in rows]
 
 @app.post("/api/admin/whitelist", status_code=201)
-def add_to_whitelist(data: dict, admin_id: str = Depends(get_admin_user)):
+@limiter.limit("10/minute")
+def add_to_whitelist(request: Request, data: dict, admin_id: str = Depends(get_admin_user)):
     email = data.get("email", "").strip().lower()
     if not email: raise HTTPException(400, "Email mancante")
     with db_conn() as conn:
@@ -195,7 +176,8 @@ def add_to_whitelist(data: dict, admin_id: str = Depends(get_admin_user)):
     return {"status": "ok"}
 
 @app.delete("/api/admin/whitelist/{email}")
-def remove_from_whitelist(email: str, admin_id: str = Depends(get_admin_user)):
+@limiter.limit("10/minute")
+def remove_from_whitelist(request: Request, email: str, admin_id: str = Depends(get_admin_user)):
     if email.lower() == ADMIN_EMAIL.lower():
         raise HTTPException(400, "Non puoi rimuovere l'amministratore dalla whitelist")
     with db_conn() as conn:
@@ -311,7 +293,8 @@ def list_entries(
         return [dict(r) for r in rows]
 
 @app.post("/api/entries", status_code=201)
-def add_entry(entry: EntryIn, user_id: str = Depends(get_current_user)):
+@limiter.limit("20/minute")
+def add_entry(request: Request, entry: EntryIn, user_id: str = Depends(get_current_user)):
     ts_value = parse_ts_or_400(entry.ts)
     food_name = entry.food.strip()
     if not food_name:
@@ -332,7 +315,8 @@ def add_entry(entry: EntryIn, user_id: str = Depends(get_current_user)):
         return dict(row)
 
 @app.put("/api/entries/{entry_id}")
-def update_entry(entry_id: int, data: EntryUpdate, user_id: str = Depends(get_current_user)):
+@limiter.limit("20/minute")
+def update_entry(request: Request, entry_id: int, data: EntryUpdate, user_id: str = Depends(get_current_user)):
     with db_conn() as conn:
         row = conn.execute(
             "SELECT * FROM entries WHERE id=? AND user_id=?", (entry_id, user_id)
@@ -357,7 +341,8 @@ def update_entry(entry_id: int, data: EntryUpdate, user_id: str = Depends(get_cu
         return dict(updated)
 
 @app.delete("/api/entries/{entry_id}", status_code=204)
-def delete_entry(entry_id: int, user_id: str = Depends(get_current_user)):
+@limiter.limit("20/minute")
+def delete_entry(request: Request, entry_id: int, user_id: str = Depends(get_current_user)):
     with db_conn() as conn:
         r = conn.execute(
             "SELECT id FROM entries WHERE id=? AND user_id=?", (entry_id, user_id)
@@ -471,7 +456,8 @@ def export_json(user_id: str = Depends(get_current_user)):
 
 # ── AI Analysis (Google Gemini) ────────────────────────────────────────────────
 @app.post("/api/analyze-food-image")
-async def analyze_food_image(file: UploadFile = File(...), admin_id: str = Depends(get_admin_user)):
+@limiter.limit("5/minute")
+async def analyze_food_image(request: Request, file: UploadFile = File(...), admin_id: str = Depends(get_admin_user)):
     if not GEMINI_KEY:
         raise HTTPException(500, "GEMINI_API_KEY non configurata")
     

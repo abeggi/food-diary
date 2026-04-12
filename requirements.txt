@@ -4,3 +4,4 @@ python-multipart>=0.0.9
 httpx
 python-dotenv
 firebase-admin
+slowapi

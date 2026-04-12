@@ -492,7 +492,7 @@ let allEntries = [];
 let allFoods = [];
 let editingId = null;
 let currentUserToken = null;
-let adminEmail = 'abeggi@gmail.com';
+let adminEmail = '';
 
 // ── Auth Logic ──────────────────────────────────────────────────────────────
 async function login() {
@@ -511,6 +511,12 @@ async function logout() {
 }
 
 if (firebaseAuth) {
+  // Auto-refresh del token ogni volta che Firebase lo rinnova (ogni ~55 min)
+  firebaseAuth.onIdTokenChanged(async (user) => {
+    if (user) currentUserToken = await user.getIdToken();
+    else currentUserToken = null;
+  });
+
   firebaseAuth.onAuthStateChanged(async (user) => {
     const loginBtn = document.getElementById('login-btn');
     const logoutBtn = document.getElementById('logout-btn');
@@ -649,7 +655,7 @@ async function loadUsers() {
 async function toggleUserStatus(email, currentlyAllowed) {
   try {
     if (currentlyAllowed) {
-       await api('DELETE', `/api/admin/whitelist/${email}`);
+       await api('DELETE', `/api/admin/whitelist/${encodeURIComponent(email)}`);
     } else {
        await api('POST', '/api/admin/whitelist', { email });
     }
