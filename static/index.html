@@ -255,6 +255,28 @@
     .btn-mobile-add:hover {
       background: var(--accent-dim);
     }
+    
+    /* Nuovo stile per l'icona delle impostazioni */
+    .btn-icon-settings {
+      background: none;
+      border: 1px solid var(--border2);
+      color: var(--text-dim);
+      width: 28px;
+      height: 28px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all .12s;
+      line-height: 1;
+    }
+
+    .btn-icon-settings:hover {
+      border-color: var(--accent-dim);
+      color: var(--accent);
+    }
 
     /* ── Sidebar ── */
     .sidebar {
@@ -855,8 +877,10 @@
           style="display:none; font-family: var(--mono); font-size: 11px; color: var(--text-dim); margin-right: 8px;">
         </div>
         <button id="login-btn" class="btn-ghost" onclick="login()" style="display:none">Accedi</button>
+        <!-- L'ordine è stato scambiato: prima Esci -->
         <button id="logout-btn" class="btn-ghost" onclick="logout()" style="display:none">Esci</button>
-        <a href="/settings" class="btn-ghost" style="text-decoration:none;">Impostazioni</a>
+        <!-- Poi il nuovo pulsante Impostazioni con icona -->
+        <button id="settings-btn" class="btn-icon-settings" onclick="location.href='/settings'" title="Impostazioni">⚙️</button>
         <button class="btn-mobile-add" id="btn-mobile-add" onclick="toggleMobileForm()" title="Aggiungi voce">＋</button>
       </div>
     </header>
@@ -1499,10 +1523,10 @@
     // ── Utils ─────────────────────────────────────────────────────────────────────
     function esc(s) {
       return String(s || '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
+        .replace(/&/g, '&')
+        .replace(/</g, '<')
+        .replace(/>/g, '>')
+        .replace(/"/g, '"');
     }
   </script>
 </body>
