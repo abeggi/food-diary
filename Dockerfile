@@ -23,6 +23,7 @@ EXPOSE 8080
 
 # Variabili d'ambiente di default
 ENV FOOD_DIARY_DB=/app/data/food_diary.db
+ENV ADMIN_EMAIL=abeggi@gmail.com
 ENV PYTHONUNBUFFERED=1
 
 # Comando per avviare l'applicazione

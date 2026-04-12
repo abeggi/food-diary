@@ -11,3 +11,4 @@ env/
 data/
 *.db
 *.log
+static/firebase-config.js
