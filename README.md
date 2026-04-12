@@ -11,15 +11,19 @@ Web app multi-utente per tracciare i pasti giornalieri, ottimizzata per uso desk
 
 ## Funzionalità
 
-- **Multi-Utente**: Accesso sicuro tramite Google. Ogni utente gestisce il proprio diario privato e i propri suggerimenti personalizzati.
-- **Login Wall**: Accesso ai contenuti dell'app limitato solo agli utenti registrati.
+- **Multi-Utente con Controllo degli Accessi**: Accesso sicuro tramite Google Workspace/Gmail.
+- **Whitelist System**: L'accesso effettivo all'app è ristretto solo agli account esplicitamente approvati dall'amministratore (Whitelist).
+- **Access Denied Wall**: Gli utenti autenticati ma non autorizzati vengono reindirizzati a una schermata di blocco dedicata con le istruzioni per richiedere l'abilitazione.
 - **Registrazione Pasti**: Inserimento voce con data/ora, categoria, cibo e quantità.
-- **AI Food Scanner 📷**: Riconoscimento automatico del cibo tramite Google Gemini Vision.
+- **AI Food Scanner 📷**: Riconoscimento automatico del cibo tramite Google Gemini Vision (Funzionalità limitata al solo Amministratore).
 - **Autocomplete Personale**: Suggerimenti intelligenti basati sullo storico privato dell'utente.
 - **Area Impostazioni**: 
   - Esportazione dati (CSV/JSON) filtrata per utente.
   - Ricerca ed editing globale del proprio database.
-- **Gestione Amministratore**: Sezione speciale per l'amministratore per elencare ed eliminare utenti (e i relativi dati) dal sistema.
+- **Pannello Gestione Amministratore**: Sezione speciale per l'amministratore dove:
+  - Gestire l'approvazione degli accessi (Abilita/Disabilita utenti in Whitelist).
+  - Pre-autorizzare nuove email.
+  - Eliminare definitivamente gli utenti e i relativi dati dal sistema.
 - **PWA & Mobile Ready**: Installabile su smartphone con icona personalizzata.
 
 ## Installazione e Configurazione
@@ -67,11 +71,15 @@ food-diary/
 └── migrate_user.py      # Script per migrare dati locali a un account Google
 ```
 
-## Gestione Amministratore
+## Gestione Amministratore & Whitelist
 
-L'utente specificato in `ADMIN_EMAIL` nel file `.env` avrà accesso alla sezione **Gestione Utenti** nelle impostazioni. Da qui è possibile:
-- Visualizzare tutti gli utenti registrati.
-- Eliminare un utente e **tutti i suoi dati** permanentemente dal database.
+L'utente specificato in `ADMIN_EMAIL` nel file `.env` ha i privilegi massimi (e non può mai essere rimosso o bloccato dal sistema). 
+Nelle **Impostazioni**, l'admin ha accesso a un pannello integrato per:
+- **Gestire gli Accessi**: Abilitare (aggiungere alla whitelist) o bloccare (rimuovere dalla whitelist) qualsiasi utente registrato con un semplice click.
+- **Pre-autorizzare**: Inserire un'email in anticipo, in modo che l'utente possa accedere immediatamente al primo login senza incontrare il blocco di sicurezza.
+- **Eliminazione Dati**: Eliminare definitivamente un utente e formattare tutti i dati (voci e suggerimenti) da esso generati.
+
+*Nota:* Per ragioni di sicurezza e contenimento dei costi API, il modulo **AI Food Scanner** è disponibile esclusivamente per l'account Amministratore.
 
 ## Sicurezza e Privacy
 
