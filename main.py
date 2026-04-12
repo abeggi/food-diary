@@ -103,15 +103,19 @@ async def get_me(authorization: Optional[str] = Header(None)):
     try:
         decoded_token = auth.verify_id_token(token)
         email = decoded_token.get('email', '')
+        uid = decoded_token['uid']
         
-        if email != ADMIN_EMAIL:
-            with db_conn() as conn:
+        with db_conn() as conn:
+            if email != ADMIN_EMAIL:
                 row = conn.execute("SELECT email FROM whitelist WHERE email = ?", (email,)).fetchone()
                 if not row:
                     raise HTTPException(403, f"Accesso negato. Invia una mail a {ADMIN_EMAIL} per richiedere l'abilitazione dell'account: {email}")
+            
+            # Aggiorna il DB locale per mantenere l'associazione Email -> Firebase UID
+            conn.execute("UPDATE whitelist SET user_id = ? WHERE email = ?", (uid, email))
 
         return {
-            "uid": decoded_token['uid'],
+            "uid": uid,
             "email": email,
             "is_admin": email == ADMIN_EMAIL
         }
@@ -152,6 +156,13 @@ def admin_delete_user(uid: str, admin_id: str = Depends(get_admin_user)):
         return
         
     try:
+        # Pre-fetch user l'email prima di cancellarlo per pulire la whitelist
+        try:
+            user_to_delete = auth.get_user(uid)
+            email_to_remove = user_to_delete.email
+        except:
+            email_to_remove = None
+
         # 1. Firebase delete
         auth.delete_user(uid)
         
@@ -159,6 +170,8 @@ def admin_delete_user(uid: str, admin_id: str = Depends(get_admin_user)):
         with db_conn() as conn:
             conn.execute("DELETE FROM entries WHERE user_id=?", (uid,))
             conn.execute("DELETE FROM foods WHERE user_id=?", (uid,))
+            if email_to_remove and email_to_remove.lower() != ADMIN_EMAIL.lower():
+                conn.execute("DELETE FROM whitelist WHERE email=?", (email_to_remove,))
             
     except Exception as e:
         raise HTTPException(500, f"Errore durante l'eliminazione: {str(e)}")
@@ -235,6 +248,10 @@ def init_db():
 
         try:
             conn.execute("ALTER TABLE foods ADD COLUMN user_id TEXT DEFAULT 'dev_user'")
+        except sqlite3.OperationalError: pass
+        
+        try:
+            conn.execute("ALTER TABLE whitelist ADD COLUMN user_id TEXT")
         except sqlite3.OperationalError: pass
 
         # Now create indexes on existing/new columns
