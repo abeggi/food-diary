@@ -161,7 +161,8 @@ def admin_delete_user(request: Request, uid: str, admin_id: str = Depends(get_ad
 
 # ── Whitelist API ─────────────────────────────────────────────────────────────
 @app.get("/api/admin/whitelist")
-def get_whitelist(admin_id: str = Depends(get_admin_user)):
+@limiter.limit("10/minute")
+def get_whitelist(request: Request, admin_id: str = Depends(get_admin_user)):
     with db_conn() as conn:
         rows = conn.execute("SELECT * FROM whitelist ORDER BY email ASC").fetchall()
         return [dict(r) for r in rows]
@@ -274,7 +275,9 @@ def parse_ts_or_400(ts: str) -> str:
 
 # ── Entries ───────────────────────────────────────────────────────────────────
 @app.get("/api/entries")
+@limiter.limit("60/minute")
 def list_entries(
+    request: Request,
     date: Optional[str] = Query(None, description="Filter by date YYYY-MM-DD"),
     limit: int = Query(200, le=1000),
     user_id: str = Depends(get_current_user)
@@ -336,7 +339,7 @@ def update_entry(request: Request, entry_id: int, data: EntryUpdate, user_id: st
         )
         conn.execute("INSERT OR IGNORE INTO foods(name, user_id) VALUES(?,?)", (food, user_id))
         updated = conn.execute(
-            "SELECT * FROM entries WHERE id=?", (entry_id,)
+            "SELECT * FROM entries WHERE id=? AND user_id=?", (entry_id, user_id)
         ).fetchone()
         return dict(updated)
 
@@ -353,7 +356,8 @@ def delete_entry(request: Request, entry_id: int, user_id: str = Depends(get_cur
 
 # ── Foods (autocomplete) ──────────────────────────────────────────────────────
 @app.get("/api/foods")
-def search_foods(q: str = Query("", min_length=0), user_id: str = Depends(get_current_user)):
+@limiter.limit("60/minute")
+def search_foods(request: Request, q: str = Query("", min_length=0), user_id: str = Depends(get_current_user)):
     q = q.strip()
     with db_conn() as conn:
         if q:
@@ -370,7 +374,8 @@ def search_foods(q: str = Query("", min_length=0), user_id: str = Depends(get_cu
         return [r["name"] for r in rows]
  
 @app.get("/api/quantities")
-def search_quantities(q: str = Query("", min_length=0), user_id: str = Depends(get_current_user)):
+@limiter.limit("60/minute")
+def search_quantities(request: Request, q: str = Query("", min_length=0), user_id: str = Depends(get_current_user)):
     q = q.strip()
     with db_conn() as conn:
         if q:
@@ -387,13 +392,15 @@ def search_quantities(q: str = Query("", min_length=0), user_id: str = Depends(g
         return [r["notes"] for r in rows]
 
 @app.delete("/api/foods/{name}", status_code=204)
-def delete_food(name: str, user_id: str = Depends(get_current_user)):
+@limiter.limit("20/minute")
+def delete_food(request: Request, name: str, user_id: str = Depends(get_current_user)):
     with db_conn() as conn:
         conn.execute("DELETE FROM foods WHERE name=? AND user_id=?", (name, user_id))
 
 # ── Export ────────────────────────────────────────────────────────────────────
 @app.get("/api/export/csv")
-def export_csv(user_id: str = Depends(get_current_user)):
+@limiter.limit("10/minute")
+def export_csv(request: Request, user_id: str = Depends(get_current_user)):
     with db_conn() as conn:
         rows = conn.execute(
             "SELECT id, ts, food, cat, notes, created FROM entries WHERE user_id=? ORDER BY ts ASC",
@@ -439,7 +446,8 @@ def export_csv(user_id: str = Depends(get_current_user)):
     )
 
 @app.get("/api/export/json")
-def export_json(user_id: str = Depends(get_current_user)):
+@limiter.limit("10/minute")
+def export_json(request: Request, user_id: str = Depends(get_current_user)):
     with db_conn() as conn:
         rows = conn.execute(
             "SELECT id, ts, food, cat, notes, created FROM entries WHERE user_id=? ORDER BY ts ASC",
