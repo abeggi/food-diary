@@ -1,8 +1,9 @@
 # Food Diary
 
-Web app personale per tracciare i pasti giornalieri, ottimizzata per uso desktop e mobile.
+Web app multi-utente per tracciare i pasti giornalieri, ottimizzata per uso desktop e mobile.
 
 - **Backend**: FastAPI + SQLite
+- **Autenticazione**: Firebase Authentication (Google Login)
 - **Frontend**: HTML/CSS/JS (single page, dark theme, premium aesthetics)
 - **Runtime**: `uvicorn` (systemd o Docker)
 - **Porta di default**: `8080`
@@ -10,98 +11,70 @@ Web app personale per tracciare i pasti giornalieri, ottimizzata per uso desktop
 
 ## Funzionalità
 
+- **Multi-Utente**: Accesso sicuro tramite Google. Ogni utente gestisce il proprio diario privato e i propri suggerimenti personalizzati.
+- **Login Wall**: Accesso ai contenuti dell'app limitato solo agli utenti registrati.
 - **Registrazione Pasti**: Inserimento voce con data/ora, categoria, cibo e quantità.
-- **AI Food Scanner 📷**: Riconoscimento automatico del cibo, della quantità e della categoria tramite foto (webcam o caricamento file). Integrato con Google Gemini Vision.
-- **Categorie Quick-Select**: Colazione, Pranzo, Snack, Cena, Dopocena tramite chips interattive.
-- **Navigazione Intelligente**: Selezione del giorno tramite menu a discesa compatto (ottimo per gestire molti mesi di dati).
-- **Modifica e Sicurezza**: Modifica inline delle voci e conferma prima dell'eliminazione per evitare errori.
-- **PWA & Mobile Ready**: Supporto completo per l'installazione su smartphone (Apple Touch Icon e Web Manifest), icona personalizzata nella home.
-- **Autocomplete**: Suggerimenti intelligenti basati sullo storico sia per i **cibi** che per le **quantità** (note), con ricerca substring.
-- **Area Impostazioni**: Pagina dedicata per l'esportazione dati e la manutenzione avanzata del diario:
-  - **Ricerca Ottimizzata**: Database filtrabile al volo, con caricamento dei risultati solo su ricerca per prestazioni ottimali.
-  - **Gestione Storico**: Modifica o eliminazione di qualunque voce direttamente in tabella.
-  - **Catalogo Suggerimenti**: Gestione granulare dei nomi cibo proposti dall'autocomplete (ricerca ed eliminazione di voci errate).
-  - **Export CSV (Excel Ready)**: Ottimizzato per Excel IT (delimitatore `;`, encoding UTF-8 con BOM, campi data e ora separati).
-  - **Export JSON**: Dump completo dei dati in formato standard per backup o migrazioni.
+- **AI Food Scanner 📷**: Riconoscimento automatico del cibo tramite Google Gemini Vision.
+- **Autocomplete Personale**: Suggerimenti intelligenti basati sullo storico privato dell'utente.
+- **Area Impostazioni**: 
+  - Esportazione dati (CSV/JSON) filtrata per utente.
+  - Ricerca ed editing globale del proprio database.
+- **Gestione Amministratore**: Sezione speciale per l'amministratore per elencare ed eliminare utenti (e i relativi dati) dal sistema.
+- **PWA & Mobile Ready**: Installabile su smartphone con icona personalizzata.
+
+## Installazione e Configurazione
+
+L'app richiede ora la configurazione di Firebase per il sistema di autenticazione.
+
+### 1. Configurazione Firebase (Backend)
+1. Crea un progetto su [Firebase Console](https://console.firebase.google.com/).
+2. Vai in **Project Settings** > **Service Accounts** e genera una nuova chiave privata JSON.
+3. Incolla il contenuto del JSON nel file `.env`:
+   ```env
+   FIREBASE_SERVICE_ACCOUNT_JSON={"type": "service_account", ...}
+   ADMIN_EMAIL=tua_email@gmail.com
+   ```
+
+### 2. Configurazione Firebase (Frontend)
+1. In Firebase Console, aggiungi un'app Web al progetto.
+2. Copia le credenziali nel file `static/firebase-config.js` (partendo da `static/firebase-config.js.example`):
+   ```javascript
+   const firebaseConfig = {
+     apiKey: "...",
+     authDomain: "...",
+     // ...
+   };
+   ```
+
+### 3. Configurazione AI (Gemini)
+Inserisci la tua API Key di Google AI nel file `.env`:
+```env
+GEMINI_API_KEY=tua_chiave_qui
+```
 
 ## Architettura
 
 ```
 food-diary/
-├── main.py              # API FastAPI, logica DB, migrazioni, export, AI
-├── requirements.txt     # dipendenze Python (FastAPI, uvicorn, httpx, python-dotenv)
-├── .env                 # configurazione API Key (Gemini)
-├── Dockerfile           # configurazione per immagine Docker
-├── docker-compose.yml   # orchestrazione container e volumi
+├── main.py              # API FastAPI, logica DB, Autenticazione Firebase
+├── requirements.txt     # dipendenze (FastAPI, firebase-admin, uvicorn, etc.)
+├── .env                 # Secret keys (Gemini, Firebase Service Account)
 ├── static/
-│   ├── index.html       # frontend client (app principale)
-│   └── settings.html    # pagina impostazioni (gestione database ed export)
-├── install.sh           # installer automatico per host Linux (systemd)
-├── food-diary.service   # unit file per systemd
-├── food-diary-ctl       # script di gestione (start/stop/logs)
-├── data/                # cartella database (auto-generata o volume Docker)
-│   └── food_diary.db
+│   ├── index.html       # App principale
+│   ├── settings.html    # Gestione dati e Admin
+│   └── firebase-config.js # Configurazione client Firebase (Ignorato da Git)
+├── data/                # Database SQLite (user-aware)
+└── migrate_user.py      # Script per migrare dati locali a un account Google
 ```
 
-`main.py` gestisce automaticamente l'inizializzazione del database e le migrazioni (es. aggiunta colonne come `cat`) all'avvio.
+## Gestione Amministratore
 
-## Installazione Rapida
+L'utente specificato in `ADMIN_EMAIL` nel file `.env` avrà accesso alla sezione **Gestione Utenti** nelle impostazioni. Da qui è possibile:
+- Visualizzare tutti gli utenti registrati.
+- Eliminare un utente e **tutti i suoi dati** permanentemente dal database.
 
-### 1. Metodo Standard (Systemd)
-Eseguire:
-```bash
-sudo bash install.sh
-```
-L'installer configurerà il virtualenv in `/opt/food-diary/venv` e avvierà il servizio systemd.
+## Sicurezza e Privacy
 
-### 2. Metodo Docker (Consigliato)
-Assicurarsi di avere un file `.env` configurato e avviare con Compose:
-```bash
-docker-compose up -d
-```
-L'immagine verrà scaricata automaticamente da `abeggi/food-diary`. I dati saranno persistenti nella cartella `./data`.
+Tutti i dati sensibili (`.env`, `firebase-config.js`, `food_diary.db`) sono inseriti nel `.gitignore` per evitare fughe di dati su repository pubblici. 
 
-## Gestione Servizio
-
-Utilizzare l'helper incluso:
-```bash
-sudo /opt/food-diary/food-diary-ctl restart  # Riavvio
-/opt/food-diary/food-diary-ctl status         # Stato
-/opt/food-diary/food-diary-ctl logs           # Visualizza log
-```
-
-## Configurazione AI
-
-L'applicazione utilizza **Google Gemini Vision** per il riconoscimento dei pasti. Per attivarla:
-
-1. Crea o modifica il file `/opt/food-diary/.env`.
-2. Inserisci la tua API Key di Google AI:
-   ```env
-   GEMINI_API_KEY=tua_chiave_qui
-   GEMINI_MODEL=gemini-flash-latest
-   ```
-3. Riavvia il servizio: `sudo /opt/food-diary/food-diary-ctl restart`.
-
-L'app invierà le foto tramite protocollo HTTPS sicuro. In caso di errori di connessione, verranno visualizzati dei toast di notifica nel frontend.
-
-## API (Nuovi Endpoint)
-
-### `POST /api/analyze-food-image`
-Accetta un file immagine (multipart/form-data) e restituisce un JSON con l'identificazione AI:
-```json
-{
-  "food": "Pasta al pomodoro",
-  "quantity": "1 piatto fondo",
-  "cat": "pranzo"
-}
-```
-
-## Database (SQLite)
-Tabelle principali:
-- `entries`: contiene le voci del diario (`ts`, `food`, `cat`, `notes`, `created`).
-- `foods`: catalogo unico cibi per l'autocomplete.
-
-## Backup
-Il database si trova in `/opt/food-diary/data/food_diary.db`. 
-È sufficiente copiare questo file per un backup completo.
-
+Per lo sviluppo, è disponibile un file `static/firebase-config.js.example` come template.

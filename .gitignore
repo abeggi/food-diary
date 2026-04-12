@@ -6,3 +6,5 @@ __pycache__/
 data/
 .venv/
 .DS_Store
+static/firebase-config.js
+migrate_user.py

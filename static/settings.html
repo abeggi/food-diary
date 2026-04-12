@@ -11,6 +11,10 @@
 <link rel="shortcut icon" href="/favicon.ico" />
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
 <link rel="manifest" href="/site.webmanifest" />
+<!-- Firebase SDK core -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="/firebase-config.js"></script>
 <style>
   :root {
     --bg:        #0d0f0e;
@@ -43,9 +47,50 @@
     min-height: 100vh;
   }
 
+  /* ── Auth Wall ── */
+  #auth-wall {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    gap: 24px;
+    padding: 32px;
+    text-align: center;
+  }
+  .auth-logo {
+    font-family: var(--mono);
+    font-size: 32px;
+    font-weight: 600;
+    color: var(--accent);
+    text-decoration: none;
+  }
+  .auth-logo span { color: var(--text-dim); font-weight: 300; }
+  .btn-login-big {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: white;
+    border: 1px solid #747775;
+    color: #1f1f1f;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 10px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color .2s;
+    margin: 0 auto;
+  }
+  .btn-login-big:hover { background-color: #f8f9fa; transform: none; }
+  .btn-login-big svg { width: 20px; height: 20px; }
+
   /* ── Layout ── */
   .shell {
-    display: flex;
+    display: none; /* Hidden until auth state confirmed */
     flex-direction: column;
     height: 100vh;
     overflow: hidden;
@@ -340,11 +385,30 @@
 </style>
 </head>
 <body>
-<div class="shell">
+<!-- Schermata di login (Auth Wall) -->
+<div id="auth-wall">
+  <div class="auth-logo">food<span>://</span>diary</div>
+  <p style="color:var(--text-dim); max-width: 300px;">Accesso richiesto per visualizzare le impostazioni.</p>
+  <button class="btn-login-big" onclick="login()">
+    <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+      <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path>
+      <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path>
+      <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24s.92 7.54 2.56 10.78l7.97-6.19z"></path>
+      <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path>
+      <path fill="none" d="M0 0h48v48H0z"></path>
+    </svg>
+    <span>Accedi con Google</span>
+  </button>
+</div>
+
+<div class="shell" id="app-shell">
   <!-- Header -->
   <header>
     <a href="/" class="logo">food<span>://</span>diary</a>
     <div class="header-actions">
+      <div id="user-info" style="display:none; font-family: var(--mono); font-size: 11px; color: var(--text-dim); margin-right: 8px;"></div>
+      <button id="login-btn" class="btn-ghost" onclick="login()" style="display:none">Accedi</button>
+      <button id="logout-btn" class="btn-ghost" onclick="logout()" style="display:none">Esci</button>
       <a class="btn-ghost" href="/">← Home</a>
     </div>
   </header>
@@ -379,6 +443,17 @@
         <div style="text-align: center; color: var(--text-dim); padding: 20px; font-family: var(--mono); width: 100%;">Caricamento...</div>
       </div>
     </section>
+
+    <!-- Admin Section -->
+    <section id="admin-section" style="display:none;">
+      <h2 class="section-title">Gestione Utenti (Admin)</h2>
+      <div id="users-list-wrap">
+        <p style="color: var(--text-dim); font-size: 13px; margin-bottom: 12px;">Elenco di tutti gli utenti registrati nel sistema.</p>
+        <div class="entries-wrap" id="users-list">
+          <div style="text-align: center; color: var(--text-dim); padding: 20px; font-family: var(--mono);">Caricamento utenti...</div>
+        </div>
+      </div>
+    </section>
   </main>
 </div>
 
@@ -388,12 +463,77 @@
 let allEntries = [];
 let allFoods = [];
 let editingId = null;
+let currentUserToken = null;
+
+// ── Auth Logic ──────────────────────────────────────────────────────────────
+async function login() {
+  if (!firebaseAuth) { toast('Configura Firebase in static/firebase-config.js', 'err'); return; }
+  try {
+    googleProvider.setCustomParameters({ prompt: 'select_account' });
+    await firebaseAuth.signInWithPopup(googleProvider);
+  } catch (e) { toast('Errore Login: ' + e.message, 'err'); }
+}
+
+async function logout() {
+  if (firebaseAuth) await firebaseAuth.signOut();
+}
+
+if (firebaseAuth) {
+  firebaseAuth.onAuthStateChanged(async (user) => {
+    const loginBtn = document.getElementById('login-btn');
+    const logoutBtn = document.getElementById('logout-btn');
+    const userInfo = document.getElementById('user-info');
+    const authWall = document.getElementById('auth-wall');
+    const appShell = document.getElementById('app-shell');
+    
+    if (user) {
+      currentUserToken = await user.getIdToken();
+      loginBtn.style.display = 'none';
+      logoutBtn.style.display = 'block';
+      userInfo.textContent = user.displayName || user.email;
+      userInfo.style.display = 'block';
+      authWall.style.display = 'none';
+      appShell.style.display = 'flex';
+      
+      // Controllo admin
+      try {
+        const me = await api('GET', '/api/me');
+        if (me.is_admin) {
+            document.getElementById('admin-section').style.display = 'block';
+            loadUsers();
+        }
+      } catch(e) {}
+    } else {
+      currentUserToken = null;
+      loginBtn.style.display = 'block';
+      logoutBtn.style.display = 'none';
+      userInfo.style.display = 'none';
+      authWall.style.display = 'flex';
+      appShell.style.display = 'none';
+    }
+    if (user) loadAll();
+  });
+} else {
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('auth-wall').style.display = 'none';
+    document.getElementById('app-shell').style.display = 'flex';
+    loadAll();
+  });
+}
 
 // ── API helpers ───────────────────────────────────────────────────────────────
 async function api(method, path, body) {
-  const opts = { method, headers: {'Content-Type':'application/json'} };
+  const headers = {'Content-Type':'application/json'};
+  if (currentUserToken) {
+    headers['Authorization'] = `Bearer ${currentUserToken}`;
+  }
+  const opts = { method, headers };
   if (body !== undefined) opts.body = JSON.stringify(body);
   const r = await fetch(path, opts);
+  if (r.status === 401) {
+    toast('Sessione scaduta o accesso negato', 'err');
+    return;
+  }
   if (!r.ok) {
     const err = await r.json().catch(() => ({detail: r.statusText}));
     throw new Error(err.detail || r.statusText);
@@ -404,7 +544,7 @@ async function api(method, path, body) {
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-  loadAll();
+  // loadAll() gestito da onAuthStateChanged
 });
 
 async function loadAll() {
@@ -418,6 +558,44 @@ async function loadAll() {
     document.getElementById('entries-wrap').innerHTML = `<div style="text-align: center; color: var(--red); padding: 40px; font-family: var(--mono);">Errore caricamento. Riprova.</div>`;
     toast('Errore caricamento', 'err');
   }
+}
+
+async function loadUsers() {
+  try {
+    const users = await api('GET', '/api/admin/users');
+    const wrap = document.getElementById('users-list');
+    if (!users || !users.length) {
+        wrap.innerHTML = `<div style="text-align: center; color: var(--text-dim); padding: 20px; font-family: var(--mono);">Nessun utente trovato</div>`;
+        return;
+    }
+    wrap.innerHTML = users.map(u => `
+      <div class="entry-row" style="grid-template-columns: 1fr auto auto;">
+        <div>
+          <div style="font-weight: 500;">${esc(u.display_name || 'Utente senza nome')}</div>
+          <div style="font-family: var(--mono); font-size: 11px; color: var(--text-dim);">${esc(u.email)}</div>
+          <div style="font-family: var(--mono); font-size: 10px; color: var(--text-faint);">UID: ${esc(u.uid)} ${u.email === 'abeggi@gmail.com' ? ' (Admin)' : ''}</div>
+        </div>
+        <div style="font-family: var(--mono); font-size: 11px; color: var(--text-dim); text-align: right; padding-top: 4px;">
+          Registrato: ${u.created ? u.created.slice(0, 10) : '—'}
+        </div>
+        <div class="entry-actions" style="opacity:1; padding-left: 12px;">
+          ${u.email !== 'abeggi@gmail.com' ? `<button class="btn-icon del" onclick="deleteUser('${u.uid}', '${escJs(u.email)}')" title="Elimina Utente">✕</button>` : ''}
+        </div>
+      </div>
+    `).join('');
+  } catch(e) {
+    document.getElementById('users-list').innerHTML = `<div style="text-align: center; color: var(--red); padding: 20px; font-family: var(--mono);">Errore nel caricamento utenti admin.</div>`;
+  }
+}
+
+async function deleteUser(uid, email) {
+  if (!confirm(`ATTENZIONE: Stai per eliminare definitivamente l'account ${email} e TUTTI i suoi dati associati dal database. Questa azione non può essere annullata. Continuare?`)) return;
+  
+  try {
+    await api('DELETE', `/api/admin/users/${uid}`);
+    toast('Utente e dati eliminati ✓', 'ok');
+    loadUsers();
+  } catch(e) { toast('Errore eliminazione: ' + e.message, 'err'); }
 }
 
 // ── Render Entries ────────────────────────────────────────────────────────────
@@ -604,8 +782,26 @@ async function deleteEntry(id) {
 }
 
 // ── Export ────────────────────────────────────────────────────────────────────
-function exportData(fmt) {
-  window.location.href = `/api/export/${fmt}`;
+async function exportData(fmt) {
+  try {
+    const headers = {};
+    if (currentUserToken) headers['Authorization'] = `Bearer ${currentUserToken}`;
+    
+    toast('Generazione file...', 'ok');
+    const r = await fetch(`/api/export/${fmt}`, { headers });
+    if (!r.ok) throw new Error('Errore nella generazione dell\'export');
+    
+    const blob = await r.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `food_diary_${new Date().toISOString().slice(0,10)}.${fmt}`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    a.remove();
+    toast('Download avviato ✓', 'ok');
+  } catch(e) { toast(e.message, 'err'); }
 }
 
 // ── Toast ─────────────────────────────────────────────────────────────────────
