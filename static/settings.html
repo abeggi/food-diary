@@ -17,22 +17,22 @@
 <script src="/firebase-config.js"></script>
 <style>
   :root {
-    --bg:        #0d0f0e;
-    --surface:   #141714;
-    --surface2:  #1b1e1b;
-    --border:    #252825;
-    --border2:   #2e332e;
-    --text:      #d4d9d4;
-    --text-dim:  #6b736b;
-    --text-faint:#3a3f3a;
-    --accent:    #6b9fff;
-    --accent-dim:#2d5a9e;
-    --accent-bg: #0f1e37;
-    --red:       #e07070;
-    --red-bg:    #2e1a1a;
+    --bg:        #f7f7f5;
+    --surface:   #ffffff;
+    --surface2:  #f0efeb;
+    --border:    #e8e5df;
+    --border2:   #d8d4cc;
+    --text:      #37352f;
+    --text-dim:  #9b9791;
+    --text-faint:#ccc9c0;
+    --accent:    #2383e2;
+    --accent-dim:#1a6bc0;
+    --accent-bg: #e8f0fd;
+    --red:       #dc4040;
+    --red-bg:    #fdecea;
     --mono:      'JetBrains Mono', monospace;
     --sans:      'Inter', sans-serif;
-    --radius:    8px;
+    --radius:    10px;
   }
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -134,9 +134,9 @@
     background: none;
     border: 1px solid var(--border2);
     color: var(--text-dim);
-    font-family: var(--mono);
-    font-size: 11px;
-    letter-spacing: .05em;
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 500;
     padding: 5px 12px;
     border-radius: var(--radius);
     cursor: pointer;
@@ -179,8 +179,9 @@
     background: var(--surface2);
     border: 1px solid var(--border2);
     color: var(--text);
-    font-family: var(--mono);
+    font-family: var(--sans);
     font-size: 14px;
+    font-weight: 500;
     padding: 12px 24px;
     border-radius: var(--radius);
     cursor: pointer;
@@ -225,7 +226,7 @@
   }
   .entry-notes {
     font-size: 13px;
-    color: #a0a6a0;
+    color: var(--text-dim);
     margin-top: 3px;
     font-style: italic;
     font-weight: 300;
@@ -286,24 +287,22 @@
   .btn-tag-del:hover { color: var(--red); background: var(--red-bg); }
 
   .entry-cat {
-    font-family: var(--mono);
-    font-size: 9px;
-    text-transform: uppercase;
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 600;
     color: var(--accent-dim);
-    margin-bottom: 2px;
-    letter-spacing: .05em;
+    margin-bottom: 3px;
   }
 
   /* categories chips for edit */
   .cat-selector { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px; }
   .cat-chip {
-    padding: 4px 10px;
-    border-radius: 14px;
+    padding: 6px 14px;
+    border-radius: 20px;
     border: 1px solid var(--border2);
-    font-family: var(--mono);
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: .05em;
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 500;
     cursor: pointer;
     color: var(--text-dim);
     transition: all .15s;
@@ -333,15 +332,16 @@
     transition: border-color .15s;
   }
   input:focus { border-color: var(--accent-dim); }
-  input[type="datetime-local"] { color-scheme: dark; }
+  input[type="datetime-local"] { color-scheme: light; }
 
   .edit-row input { font-size: 13px; }
   .edit-actions { display: flex; gap: 6px; margin-top: 8px; grid-column: 1 / -1; }
   .btn-sm {
-    font-family: var(--mono);
-    font-size: 12px;
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 500;
     padding: 6px 14px;
-    border-radius: 5px;
+    border-radius: 6px;
     cursor: pointer;
     border: 1px solid;
     transition: all .12s;

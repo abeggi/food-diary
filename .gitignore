@@ -12,3 +12,6 @@ data/
 .DS_Store
 static/firebase-config.js
 migrate_user.py
+CLAUDE.md
+.claude/
+

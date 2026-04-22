@@ -20,22 +20,27 @@
   <script src="/firebase-config.js"></script>
   <style>
     :root {
-      --bg: #0d0f0e;
-      --surface: #141714;
-      --surface2: #1b1e1b;
-      --border: #252825;
-      --border2: #2e332e;
-      --text: #d4d9d4;
-      --text-dim: #6b736b;
-      --text-faint: #3a3f3a;
-      --accent: #6b9fff;
-      --accent-dim: #2d5a9e;
-      --accent-bg: #0f1e37;
-      --red: #e07070;
-      --red-bg: #2e1a1a;
+      --bg: #f7f7f5;
+      --surface: #ffffff;
+      --surface2: #f0efeb;
+      --border: #e8e5df;
+      --border2: #d8d4cc;
+      --text: #37352f;
+      --text-dim: #9b9791;
+      --text-faint: #ccc9c0;
+      --accent: #2383e2;
+      --accent-dim: #1a6bc0;
+      --accent-bg: #e8f0fd;
+      --red: #dc4040;
+      --red-bg: #fdecea;
       --mono: 'JetBrains Mono', monospace;
       --sans: 'Inter', sans-serif;
-      --radius: 8px;
+      --radius: 10px;
+      --cat-colazione: #d9730d;
+      --cat-pranzo:    #0f7b6c;
+      --cat-snack:     #0891b2;
+      --cat-cena:      #2383e2;
+      --cat-dopocena:  #6940a5;
     }
 
     *,
@@ -218,9 +223,9 @@
       background: none;
       border: 1px solid var(--border2);
       color: var(--text-dim);
-      font-family: var(--mono);
-      font-size: 11px;
-      letter-spacing: .05em;
+      font-family: var(--sans);
+      font-size: 12px;
+      font-weight: 500;
       padding: 5px 12px;
       border-radius: var(--radius);
       cursor: pointer;
@@ -297,9 +302,10 @@
     }
 
     .form-label {
-      font-family: var(--mono);
-      font-size: 10px;
-      letter-spacing: .12em;
+      font-family: var(--sans);
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: .06em;
       color: var(--text-dim);
       text-transform: uppercase;
       margin-bottom: 5px;
@@ -329,7 +335,7 @@
     }
 
     input[type="datetime-local"] {
-      color-scheme: dark;
+      color-scheme: light;
     }
 
     /* autocomplete */
@@ -345,7 +351,7 @@
       max-height: 200px;
       overflow-y: auto;
       display: none;
-      box-shadow: 0 4px 24px rgba(0, 0, 0, .4);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, .10);
     }
 
     .autocomplete-list.visible {
@@ -381,15 +387,14 @@
       background: var(--accent-bg);
       border: 1px solid var(--accent-dim);
       color: var(--accent);
-      font-family: var(--mono);
-      font-size: 13px;
-      letter-spacing: .06em;
+      font-family: var(--sans);
+      font-size: 14px;
+      font-weight: 500;
       padding: 10px;
       border-radius: var(--radius);
       cursor: pointer;
       transition: all .15s;
       width: 100%;
-      font-weight: 400;
     }
 
     .btn-add:hover {
@@ -484,7 +489,12 @@
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      transition: border-color .15s;
+      box-shadow: 0 1px 3px rgba(0,0,0,.06), 0 0 0 1px rgba(0,0,0,.04);
+      transition: border-color .15s, box-shadow .15s;
+    }
+
+    .entry-row:hover {
+      box-shadow: 0 2px 8px rgba(0,0,0,.10), 0 0 0 1px rgba(0,0,0,.05);
     }
 
     .entry-row:hover {
@@ -509,7 +519,7 @@
 
     .entry-notes {
       font-size: 13px;
-      color: #a0a6a0;
+      color: var(--text-dim);
       margin-top: 3px;
       font-style: italic;
       font-weight: 300;
@@ -593,13 +603,12 @@
     }
 
     .cat-chip {
-      padding: 4px 10px;
-      border-radius: 14px;
+      padding: 6px 14px;
+      border-radius: 20px;
       border: 1px solid var(--border2);
-      font-family: var(--mono);
-      font-size: 10px;
-      text-transform: uppercase;
-      letter-spacing: .05em;
+      font-family: var(--sans);
+      font-size: 13px;
+      font-weight: 500;
       cursor: pointer;
       color: var(--text-dim);
       transition: all .15s;
@@ -617,13 +626,36 @@
     }
 
     .entry-cat {
-      font-family: var(--mono);
-      font-size: 9px;
-      text-transform: uppercase;
+      font-family: var(--sans);
+      font-size: 12px;
+      font-weight: 600;
       color: var(--accent-dim);
-      margin-bottom: 2px;
-      letter-spacing: .05em;
+      margin-bottom: 3px;
     }
+
+    /* ── Colori per categoria ── */
+    .entry-row[data-cat="colazione"] { border-left: 6px solid var(--cat-colazione); background: linear-gradient(to right, rgba(217,115,13,.06)  0%, var(--surface) 55%); }
+    .entry-row[data-cat="pranzo"]    { border-left: 6px solid var(--cat-pranzo);    background: linear-gradient(to right, rgba(15,123,108,.06)   0%, var(--surface) 55%); }
+    .entry-row[data-cat="snack"]     { border-left: 6px solid var(--cat-snack);     background: linear-gradient(to right, rgba(8,145,178,.06)    0%, var(--surface) 55%); }
+    .entry-row[data-cat="cena"]      { border-left: 6px solid var(--cat-cena);      background: linear-gradient(to right, rgba(35,131,226,.06)   0%, var(--surface) 55%); }
+    .entry-row[data-cat="dopocena"]  { border-left: 6px solid var(--cat-dopocena);  background: linear-gradient(to right, rgba(105,64,165,.06)   0%, var(--surface) 55%); }
+
+    .entry-row[data-cat="colazione"] .entry-cat { color: var(--cat-colazione); }
+    .entry-row[data-cat="pranzo"]    .entry-cat { color: var(--cat-pranzo); }
+    .entry-row[data-cat="snack"]     .entry-cat { color: var(--cat-snack); }
+    .entry-row[data-cat="cena"]      .entry-cat { color: var(--cat-cena); }
+    .entry-row[data-cat="dopocena"]  .entry-cat { color: var(--cat-dopocena); }
+
+    .cat-chip[data-cat="colazione"]:hover,
+    .cat-chip[data-cat="colazione"].active { background: rgba(217,115,13,.10);  border-color: var(--cat-colazione); color: var(--cat-colazione); }
+    .cat-chip[data-cat="pranzo"]:hover,
+    .cat-chip[data-cat="pranzo"].active    { background: rgba(15,123,108,.10);  border-color: var(--cat-pranzo);    color: var(--cat-pranzo); }
+    .cat-chip[data-cat="snack"]:hover,
+    .cat-chip[data-cat="snack"].active     { background: rgba(8,145,178,.10);   border-color: var(--cat-snack);     color: var(--cat-snack); }
+    .cat-chip[data-cat="cena"]:hover,
+    .cat-chip[data-cat="cena"].active      { background: var(--accent-bg);      border-color: var(--accent-dim);    color: var(--accent); }
+    .cat-chip[data-cat="dopocena"]:hover,
+    .cat-chip[data-cat="dopocena"].active  { background: rgba(105,64,165,.10);  border-color: var(--cat-dopocena);  color: var(--cat-dopocena); }
 
     /* inline edit */
     .entry-row.editing {
@@ -651,10 +683,11 @@
     }
 
     .btn-sm {
-      font-family: var(--mono);
-      font-size: 12px;
+      font-family: var(--sans);
+      font-size: 13px;
+      font-weight: 500;
       padding: 6px 14px;
-      border-radius: 5px;
+      border-radius: 6px;
       cursor: pointer;
       border: 1px solid;
       transition: all .12s;
@@ -689,8 +722,8 @@
       align-items: center;
       justify-content: center;
       color: var(--text-faint);
-      font-family: var(--mono);
-      font-size: 13px;
+      font-family: var(--sans);
+      font-size: 14px;
       gap: 10px;
       text-align: center;
       padding: 40px;
@@ -749,14 +782,78 @@
       border-radius: 2px;
     }
 
+    /* ── Sheet Handle ── */
+    .sheet-handle {
+      width: 36px;
+      height: 4px;
+      background: var(--border2);
+      border-radius: 2px;
+      margin: 0 auto 18px;
+      display: none;
+      flex-shrink: 0;
+    }
+
+    /* ── Sheet Backdrop ── */
+    .sheet-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .55);
+      z-index: 490;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .3s;
+    }
+
+    .sheet-backdrop.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* ── FAB ── */
+    .fab {
+      display: none;
+      position: fixed;
+      bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+      right: 20px;
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: var(--accent-bg);
+      border: 1.5px solid var(--accent-dim);
+      color: var(--accent);
+      font-size: 26px;
+      line-height: 1;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 400;
+      box-shadow: 0 2px 12px rgba(35,131,226,.25), 0 1px 4px rgba(0,0,0,.10);
+      transition: all .2s;
+    }
+
+    .fab:hover {
+      box-shadow: 0 4px 20px rgba(35,131,226,.35), 0 2px 6px rgba(0,0,0,.12);
+    }
+
+    .fab:active {
+      transform: scale(.92);
+      background: var(--accent-dim);
+    }
+
     /* ═══════════════════════════════════════════
-     MOBILE  (≤ 768px)
-  ═══════════════════════════════════════════ */
+       MOBILE  (≤ 768px)
+    ═══════════════════════════════════════════ */
     @media (max-width: 768px) {
+      body {
+        font-size: 16px;
+      }
+
       .shell {
         display: flex;
         flex-direction: column;
         height: 100vh;
+        height: 100svh;
         overflow: hidden;
       }
 
@@ -765,71 +862,209 @@
         flex-shrink: 0;
       }
 
+      /* Semplifica header: nome utente e logout nascosti, accessibili da impostazioni */
+      #user-info,
+      #logout-btn {
+        display: none !important;
+      }
+
+      /* Nascosto: sostituito dal FAB */
       .btn-mobile-add {
+        display: none;
+      }
+
+      .fab {
         display: flex;
       }
 
-      .sidebar {
-        border-right: none;
-        flex-shrink: 0;
-        overflow: hidden;
+      .sheet-backdrop {
+        display: block;
       }
 
+      .sheet-handle {
+        display: block;
+      }
+
+      /* Sidebar collassa a 0 — il form è ora un bottom sheet fixed */
+      .sidebar {
+        height: 0;
+        min-height: 0;
+        flex-shrink: 0;
+        overflow: visible;
+        border-right: none;
+      }
+
+      /* Bottom sheet */
       .add-form {
-        max-height: 0;
-        overflow: hidden;
-        transition: max-height .3s ease;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: var(--surface);
+        border-top: 1px solid var(--border2);
+        border-radius: 20px 20px 0 0;
+        box-shadow: 0 -4px 24px rgba(0, 0, 0, .10), 0 0 0 1px rgba(0,0,0,.06);
+        z-index: 500;
+        max-height: none;
         border-bottom: none;
-        padding: 0 16px;
-        gap: 10px;
+        padding: 0;
+        overflow-y: auto;
+        overflow-x: hidden;
+        gap: 14px;
+        transform: translateY(100%);
+        transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
       }
 
       .add-form.open {
-        max-height: 500px;
-        padding: 16px;
-        border-bottom: 1px solid var(--border);
+        transform: translateY(0);
+        padding: 8px 20px calc(28px + env(safe-area-inset-bottom, 0px));
       }
 
       .day-list {
         display: none;
       }
 
+      .main {
+        flex: 1;
+        overflow: hidden;
+        min-height: 0;
+      }
+
       .main-header {
-        padding: 14px 18px 12px;
+        padding: 16px 20px 12px;
       }
 
       .main-date {
-        font-size: 17px;
+        font-size: 20px;
+        font-weight: 700;
+      }
+
+      .main-count {
+        font-size: 13px;
       }
 
       .day-select-wrap {
         max-width: 100%;
+        margin-top: 6px;
+      }
+
+      #day-select {
+        font-size: 14px;
+        padding: 8px 32px 8px 12px;
       }
 
       .entries-wrap {
-        padding: 12px 16px;
-        gap: 8px;
+        padding: 14px 16px 88px;
+        gap: 10px;
       }
 
       .entry-row {
-        grid-template-columns: 46px 1fr auto;
-        gap: 10px;
-        padding: 12px 14px;
+        grid-template-columns: 50px 1fr auto;
+        gap: 12px;
+        padding: 14px 16px;
+        border-radius: 10px;
+      }
+
+      .entry-time {
+        font-size: 14px;
+      }
+
+      .entry-food {
+        font-size: 17px;
+        font-weight: 600;
+      }
+
+      .entry-notes {
+        font-size: 14px;
+        margin-top: 4px;
+      }
+
+      .entry-cat {
+        font-size: 13px;
+        margin-bottom: 3px;
       }
 
       .entry-actions {
         opacity: 1;
+        gap: 6px;
+      }
+
+      .btn-icon {
+        width: 38px;
+        height: 38px;
+        font-size: 15px;
+        border-radius: 8px;
+      }
+
+      .btn-icon-settings {
+        width: 38px;
+        height: 38px;
+        font-size: 18px;
+      }
+
+      /* 16px previene lo zoom automatico di iOS al focus */
+      input[type="text"],
+      input[type="datetime-local"] {
+        font-size: 16px;
+        padding: 12px 14px;
+      }
+
+      .form-label {
+        font-size: 11px;
+        letter-spacing: .1em;
+        margin-bottom: 7px;
+      }
+
+      .cat-selector {
+        gap: 8px;
+        margin-top: 6px;
+      }
+
+      .cat-chip {
+        padding: 9px 16px;
+        font-size: 14px;
+        border-radius: 20px;
+      }
+
+      .btn-add {
+        padding: 14px;
+        font-size: 15px;
+        letter-spacing: .05em;
+        margin-top: 4px;
+      }
+
+      .autocomplete-list {
+        max-height: 200px;
+      }
+
+      .ac-item {
+        padding: 13px 14px;
+        font-size: 15px;
       }
 
       .edit-row {
         grid-template-columns: 1fr;
+        gap: 10px;
+      }
+
+      .edit-actions {
+        gap: 8px;
+        margin-top: 10px;
+      }
+
+      .btn-sm {
+        padding: 11px 18px;
+        font-size: 13px;
+        border-radius: 8px;
       }
 
       #toast {
-        bottom: 16px;
+        bottom: 90px;
         right: 16px;
         left: 16px;
         text-align: center;
+        font-size: 14px;
+        padding: 13px 18px;
       }
     }
   </style>
@@ -886,6 +1121,7 @@
     <!-- Sidebar -->
     <aside class="sidebar" id="sidebar">
       <div class="add-form">
+        <div class="sheet-handle"></div>
         <div>
           <label class="form-label" for="inp-ts">quando</label>
           <input type="datetime-local" id="inp-ts">
@@ -911,11 +1147,11 @@
         <div>
           <label class="form-label">pasto</label>
           <div class="cat-selector" id="add-cat-selector">
-            <div class="cat-chip" onclick="selectCat('colazione', 'add')">colazione</div>
-            <div class="cat-chip" onclick="selectCat('pranzo', 'add')">pranzo</div>
-            <div class="cat-chip" onclick="selectCat('snack', 'add')">snack</div>
-            <div class="cat-chip" onclick="selectCat('cena', 'add')">cena</div>
-            <div class="cat-chip" onclick="selectCat('dopocena', 'add')">dopocena</div>
+            <div class="cat-chip" data-cat="colazione" onclick="selectCat('colazione', 'add')">colazione</div>
+            <div class="cat-chip" data-cat="pranzo"    onclick="selectCat('pranzo', 'add')">pranzo</div>
+            <div class="cat-chip" data-cat="snack"     onclick="selectCat('snack', 'add')">snack</div>
+            <div class="cat-chip" data-cat="cena"      onclick="selectCat('cena', 'add')">cena</div>
+            <div class="cat-chip" data-cat="dopocena"  onclick="selectCat('dopocena', 'add')">dopocena</div>
           </div>
           <input type="hidden" id="inp-cat" value="">
         </div>
@@ -946,6 +1182,8 @@
         </div>
       </div>
     </main>
+    <div class="sheet-backdrop" id="sheet-backdrop"></div>
+    <button class="fab" id="fab" onclick="toggleMobileForm()" aria-label="Aggiungi voce">＋</button>
   </div>
 
   <div id="toast"></div>
@@ -1068,22 +1306,32 @@
 
     function toggleMobileForm() {
       const form = document.querySelector('.add-form');
+      const backdrop = document.getElementById('sheet-backdrop');
+      const fab = document.getElementById('fab');
+      const isOpen = form.classList.contains('open');
       form.classList.toggle('open');
-      document.getElementById('btn-mobile-add').textContent =
-        form.classList.contains('open') ? '✕' : '＋';
+      if (backdrop) backdrop.classList.toggle('visible', !isOpen);
+      if (fab) fab.textContent = isOpen ? '＋' : '✕';
+      if (!isOpen) setTimeout(() => document.getElementById('inp-food').focus(), 350);
     }
 
     function closeMobileForm() {
       if (!isMobile()) return;
       const form = document.querySelector('.add-form');
+      const backdrop = document.getElementById('sheet-backdrop');
+      const fab = document.getElementById('fab');
       form.classList.remove('open');
-      document.getElementById('btn-mobile-add').textContent = '＋';
+      if (backdrop) backdrop.classList.remove('visible');
+      if (fab) fab.textContent = '＋';
     }
 
     // ── Init ──────────────────────────────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', () => {
       setNow();
       // loadAll() viene chiamato da onAuthStateChanged o manualmente in dev-mode
+
+      const bd = document.getElementById('sheet-backdrop');
+      if (bd) bd.addEventListener('click', closeMobileForm);
 
       document.getElementById('inp-notes').addEventListener('input', onNotesInput);
       document.getElementById('inp-notes').addEventListener('keydown', onNotesKeydown);
@@ -1210,7 +1458,7 @@
       const time = e.ts.slice(11, 16);
       const cat = e.cat ? `<div class="entry-cat">${esc(e.cat)}</div>` : '';
       const notes = e.notes ? `<div class="entry-notes">${esc(e.notes)}</div>` : '';
-      return `<div class="entry-row" id="entry-${e.id}">
+      return `<div class="entry-row" id="entry-${e.id}" data-cat="${esc(e.cat || '')}">
     <div class="entry-time">${time}</div>
     <div>
       ${cat}
@@ -1328,11 +1576,11 @@
     <div class="edit-row" style="margin-top:0">
       <div>
         <div class="cat-selector" id="edit-cat-selector-${id}">
-          <div class="cat-chip ${entry.cat === 'colazione' ? 'active' : ''}" onclick="selectCat('colazione', 'edit', ${id})">colazione</div>
-          <div class="cat-chip ${entry.cat === 'pranzo' ? 'active' : ''}" onclick="selectCat('pranzo', 'edit', ${id})">pranzo</div>
-          <div class="cat-chip ${entry.cat === 'snack' ? 'active' : ''}" onclick="selectCat('snack', 'edit', ${id})">snack</div>
-          <div class="cat-chip ${entry.cat === 'cena' ? 'active' : ''}" onclick="selectCat('cena', 'edit', ${id})">cena</div>
-          <div class="cat-chip ${entry.cat === 'dopocena' ? 'active' : ''}" onclick="selectCat('dopocena', 'edit', ${id})">dopocena</div>
+          <div class="cat-chip ${entry.cat === 'colazione' ? 'active' : ''}" data-cat="colazione" onclick="selectCat('colazione', 'edit', ${id})">colazione</div>
+          <div class="cat-chip ${entry.cat === 'pranzo'    ? 'active' : ''}" data-cat="pranzo"    onclick="selectCat('pranzo', 'edit', ${id})">pranzo</div>
+          <div class="cat-chip ${entry.cat === 'snack'     ? 'active' : ''}" data-cat="snack"     onclick="selectCat('snack', 'edit', ${id})">snack</div>
+          <div class="cat-chip ${entry.cat === 'cena'      ? 'active' : ''}" data-cat="cena"      onclick="selectCat('cena', 'edit', ${id})">cena</div>
+          <div class="cat-chip ${entry.cat === 'dopocena'  ? 'active' : ''}" data-cat="dopocena"  onclick="selectCat('dopocena', 'edit', ${id})">dopocena</div>
         </div>
         <input type="hidden" id="edit-cat-inp-${id}" value="${esc(entry.cat || '')}">
       </div>

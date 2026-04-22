@@ -4,7 +4,7 @@ Web app multi-utente per tracciare i pasti giornalieri, ottimizzata per uso desk
 
 - **Backend**: FastAPI + SQLite
 - **Autenticazione**: Firebase Authentication (Google Login)
-- **Frontend**: HTML/CSS/JS (single page, dark theme, premium aesthetics)
+- **Frontend**: HTML/CSS/JS (single page, light theme Notion-inspired, mobile-first)
 - **Runtime**: `uvicorn` (systemd o Docker)
 - **Porta di default**: `8080`
 - **Docker Image**: `abeggi/food-diary:latest`
