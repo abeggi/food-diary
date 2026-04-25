@@ -37,10 +37,31 @@
       --sans: 'Inter', sans-serif;
       --radius: 10px;
       --cat-colazione: #d9730d;
-      --cat-pranzo:    #0f7b6c;
-      --cat-snack:     #0891b2;
-      --cat-cena:      #2383e2;
-      --cat-dopocena:  #6940a5;
+      --cat-pranzo: #0f7b6c;
+      --cat-snack: #0891b2;
+      --cat-cena: #2383e2;
+      --cat-dopocena: #6940a5;
+    }
+
+    [data-theme="dark"] {
+      --bg: #1a1a18;
+      --surface: #242422;
+      --surface2: #2e2e2b;
+      --border: #3a3a36;
+      --border2: #4a4a45;
+      --text: #e8e6e0;
+      --text-dim: #8a8780;
+      --text-faint: #4a4845;
+      --accent: #4a9eff;
+      --accent-dim: #2383e2;
+      --accent-bg: #1a2a40;
+      --red: #ff6b6b;
+      --red-bg: #2a1515;
+      --cat-colazione: #e8850d;
+      --cat-pranzo: #12a08e;
+      --cat-snack: #0ea5c9;
+      --cat-cena: #4a9eff;
+      --cat-dopocena: #8b6acf;
     }
 
     *,
@@ -69,7 +90,8 @@
       right: 0;
       bottom: 0;
       background: var(--bg);
-      display: none; /* mostrato da JS solo dopo onAuthStateChanged se non loggato */
+      display: none;
+      /* mostrato da JS solo dopo onAuthStateChanged se non loggato */
       flex-direction: column;
       align-items: center;
       justify-content: center;
@@ -260,7 +282,7 @@
     .btn-mobile-add:hover {
       background: var(--accent-dim);
     }
-    
+
     /* Nuovo stile per l'icona delle impostazioni */
     .btn-icon-settings {
       background: none;
@@ -489,12 +511,12 @@
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      box-shadow: 0 1px 3px rgba(0,0,0,.06), 0 0 0 1px rgba(0,0,0,.04);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, .06), 0 0 0 1px rgba(0, 0, 0, .04);
       transition: border-color .15s, box-shadow .15s;
     }
 
     .entry-row:hover {
-      box-shadow: 0 2px 8px rgba(0,0,0,.10), 0 0 0 1px rgba(0,0,0,.05);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, .10), 0 0 0 1px rgba(0, 0, 0, .05);
     }
 
     .entry-row:hover {
@@ -634,28 +656,85 @@
     }
 
     /* ── Colori per categoria ── */
-    .entry-row[data-cat="colazione"] { border-left: 6px solid var(--cat-colazione); background: linear-gradient(to right, rgba(217,115,13,.06)  0%, var(--surface) 55%); }
-    .entry-row[data-cat="pranzo"]    { border-left: 6px solid var(--cat-pranzo);    background: linear-gradient(to right, rgba(15,123,108,.06)   0%, var(--surface) 55%); }
-    .entry-row[data-cat="snack"]     { border-left: 6px solid var(--cat-snack);     background: linear-gradient(to right, rgba(8,145,178,.06)    0%, var(--surface) 55%); }
-    .entry-row[data-cat="cena"]      { border-left: 6px solid var(--cat-cena);      background: linear-gradient(to right, rgba(35,131,226,.06)   0%, var(--surface) 55%); }
-    .entry-row[data-cat="dopocena"]  { border-left: 6px solid var(--cat-dopocena);  background: linear-gradient(to right, rgba(105,64,165,.06)   0%, var(--surface) 55%); }
+    .entry-row[data-cat="colazione"] {
+      border-left: 6px solid var(--cat-colazione);
+      background: linear-gradient(to right, rgba(217, 115, 13, .06) 0%, var(--surface) 55%);
+    }
 
-    .entry-row[data-cat="colazione"] .entry-cat { color: var(--cat-colazione); }
-    .entry-row[data-cat="pranzo"]    .entry-cat { color: var(--cat-pranzo); }
-    .entry-row[data-cat="snack"]     .entry-cat { color: var(--cat-snack); }
-    .entry-row[data-cat="cena"]      .entry-cat { color: var(--cat-cena); }
-    .entry-row[data-cat="dopocena"]  .entry-cat { color: var(--cat-dopocena); }
+    .entry-row[data-cat="pranzo"] {
+      border-left: 6px solid var(--cat-pranzo);
+      background: linear-gradient(to right, rgba(15, 123, 108, .06) 0%, var(--surface) 55%);
+    }
+
+    .entry-row[data-cat="snack"] {
+      border-left: 6px solid var(--cat-snack);
+      background: linear-gradient(to right, rgba(8, 145, 178, .06) 0%, var(--surface) 55%);
+    }
+
+    .entry-row[data-cat="cena"] {
+      border-left: 6px solid var(--cat-cena);
+      background: linear-gradient(to right, rgba(35, 131, 226, .06) 0%, var(--surface) 55%);
+    }
+
+    .entry-row[data-cat="dopocena"] {
+      border-left: 6px solid var(--cat-dopocena);
+      background: linear-gradient(to right, rgba(105, 64, 165, .06) 0%, var(--surface) 55%);
+    }
+
+    .entry-row[data-cat="colazione"] .entry-cat {
+      color: var(--cat-colazione);
+    }
+
+    .entry-row[data-cat="pranzo"] .entry-cat {
+      color: var(--cat-pranzo);
+    }
+
+    .entry-row[data-cat="snack"] .entry-cat {
+      color: var(--cat-snack);
+    }
+
+    .entry-row[data-cat="cena"] .entry-cat {
+      color: var(--cat-cena);
+    }
+
+    .entry-row[data-cat="dopocena"] .entry-cat {
+      color: var(--cat-dopocena);
+    }
 
     .cat-chip[data-cat="colazione"]:hover,
-    .cat-chip[data-cat="colazione"].active { background: rgba(217,115,13,.10);  border-color: var(--cat-colazione); color: var(--cat-colazione); }
+    .cat-chip[data-cat="colazione"].active {
+      background: rgba(217, 115, 13, .10);
+      border-color: var(--cat-colazione);
+      color: var(--cat-colazione);
+    }
+
     .cat-chip[data-cat="pranzo"]:hover,
-    .cat-chip[data-cat="pranzo"].active    { background: rgba(15,123,108,.10);  border-color: var(--cat-pranzo);    color: var(--cat-pranzo); }
+    .cat-chip[data-cat="pranzo"].active {
+      background: rgba(15, 123, 108, .10);
+      border-color: var(--cat-pranzo);
+      color: var(--cat-pranzo);
+    }
+
     .cat-chip[data-cat="snack"]:hover,
-    .cat-chip[data-cat="snack"].active     { background: rgba(8,145,178,.10);   border-color: var(--cat-snack);     color: var(--cat-snack); }
+    .cat-chip[data-cat="snack"].active {
+      background: rgba(8, 145, 178, .10);
+      border-color: var(--cat-snack);
+      color: var(--cat-snack);
+    }
+
     .cat-chip[data-cat="cena"]:hover,
-    .cat-chip[data-cat="cena"].active      { background: var(--accent-bg);      border-color: var(--accent-dim);    color: var(--accent); }
+    .cat-chip[data-cat="cena"].active {
+      background: var(--accent-bg);
+      border-color: var(--accent-dim);
+      color: var(--accent);
+    }
+
     .cat-chip[data-cat="dopocena"]:hover,
-    .cat-chip[data-cat="dopocena"].active  { background: rgba(105,64,165,.10);  border-color: var(--cat-dopocena);  color: var(--cat-dopocena); }
+    .cat-chip[data-cat="dopocena"].active {
+      background: rgba(105, 64, 165, .10);
+      border-color: var(--cat-dopocena);
+      color: var(--cat-dopocena);
+    }
 
     /* inline edit */
     .entry-row.editing {
@@ -828,12 +907,12 @@
       justify-content: center;
       cursor: pointer;
       z-index: 400;
-      box-shadow: 0 2px 12px rgba(35,131,226,.25), 0 1px 4px rgba(0,0,0,.10);
+      box-shadow: 0 2px 12px rgba(35, 131, 226, .25), 0 1px 4px rgba(0, 0, 0, .10);
       transition: all .2s;
     }
 
     .fab:hover {
-      box-shadow: 0 4px 20px rgba(35,131,226,.35), 0 2px 6px rgba(0,0,0,.12);
+      box-shadow: 0 4px 20px rgba(35, 131, 226, .35), 0 2px 6px rgba(0, 0, 0, .12);
     }
 
     .fab:active {
@@ -903,7 +982,7 @@
         background: var(--surface);
         border-top: 1px solid var(--border2);
         border-radius: 20px 20px 0 0;
-        box-shadow: 0 -4px 24px rgba(0, 0, 0, .10), 0 0 0 1px rgba(0,0,0,.06);
+        box-shadow: 0 -4px 24px rgba(0, 0, 0, .10), 0 0 0 1px rgba(0, 0, 0, .06);
         z-index: 500;
         max-height: none;
         border-bottom: none;
@@ -1113,7 +1192,8 @@
         </div>
         <button id="login-btn" class="btn-ghost" onclick="login()" style="display:none">Accedi</button>
         <button class="btn-mobile-add" id="btn-mobile-add" onclick="toggleMobileForm()" title="Aggiungi voce">＋</button>
-        <button id="settings-btn" class="btn-icon-settings" onclick="location.href='/settings'" title="Impostazioni">⚙️</button> 
+        <button id="settings-btn" class="btn-icon-settings" onclick="location.href='/settings'"
+          title="Impostazioni">⚙️</button>
         <button id="logout-btn" class="btn-ghost" onclick="logout()" style="display:none">Esci</button>
       </div>
     </header>
@@ -1148,10 +1228,10 @@
           <label class="form-label">pasto</label>
           <div class="cat-selector" id="add-cat-selector">
             <div class="cat-chip" data-cat="colazione" onclick="selectCat('colazione', 'add')">colazione</div>
-            <div class="cat-chip" data-cat="pranzo"    onclick="selectCat('pranzo', 'add')">pranzo</div>
-            <div class="cat-chip" data-cat="snack"     onclick="selectCat('snack', 'add')">snack</div>
-            <div class="cat-chip" data-cat="cena"      onclick="selectCat('cena', 'add')">cena</div>
-            <div class="cat-chip" data-cat="dopocena"  onclick="selectCat('dopocena', 'add')">dopocena</div>
+            <div class="cat-chip" data-cat="pranzo" onclick="selectCat('pranzo', 'add')">pranzo</div>
+            <div class="cat-chip" data-cat="snack" onclick="selectCat('snack', 'add')">snack</div>
+            <div class="cat-chip" data-cat="cena" onclick="selectCat('cena', 'add')">cena</div>
+            <div class="cat-chip" data-cat="dopocena" onclick="selectCat('dopocena', 'add')">dopocena</div>
           </div>
           <input type="hidden" id="inp-cat" value="">
         </div>
@@ -1577,10 +1657,10 @@
       <div>
         <div class="cat-selector" id="edit-cat-selector-${id}">
           <div class="cat-chip ${entry.cat === 'colazione' ? 'active' : ''}" data-cat="colazione" onclick="selectCat('colazione', 'edit', ${id})">colazione</div>
-          <div class="cat-chip ${entry.cat === 'pranzo'    ? 'active' : ''}" data-cat="pranzo"    onclick="selectCat('pranzo', 'edit', ${id})">pranzo</div>
-          <div class="cat-chip ${entry.cat === 'snack'     ? 'active' : ''}" data-cat="snack"     onclick="selectCat('snack', 'edit', ${id})">snack</div>
-          <div class="cat-chip ${entry.cat === 'cena'      ? 'active' : ''}" data-cat="cena"      onclick="selectCat('cena', 'edit', ${id})">cena</div>
-          <div class="cat-chip ${entry.cat === 'dopocena'  ? 'active' : ''}" data-cat="dopocena"  onclick="selectCat('dopocena', 'edit', ${id})">dopocena</div>
+          <div class="cat-chip ${entry.cat === 'pranzo' ? 'active' : ''}" data-cat="pranzo"    onclick="selectCat('pranzo', 'edit', ${id})">pranzo</div>
+          <div class="cat-chip ${entry.cat === 'snack' ? 'active' : ''}" data-cat="snack"     onclick="selectCat('snack', 'edit', ${id})">snack</div>
+          <div class="cat-chip ${entry.cat === 'cena' ? 'active' : ''}" data-cat="cena"      onclick="selectCat('cena', 'edit', ${id})">cena</div>
+          <div class="cat-chip ${entry.cat === 'dopocena' ? 'active' : ''}" data-cat="dopocena"  onclick="selectCat('dopocena', 'edit', ${id})">dopocena</div>
         </div>
         <input type="hidden" id="edit-cat-inp-${id}" value="${esc(entry.cat || '')}">
       </div>
@@ -1765,6 +1845,14 @@
       clearTimeout(toastTimer);
       toastTimer = setTimeout(() => { el.className = ''; }, 2200);
     }
+
+    // ── Dark Mode ────────────────────────────────────────────────────────────────
+    (function initTheme() {
+      const saved = localStorage.getItem('fd-theme');
+      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const dark = saved ? saved === 'dark' : prefersDark;
+      if (dark) document.documentElement.setAttribute('data-theme', 'dark');
+    })();
 
     // ── Utils ─────────────────────────────────────────────────────────────────────
     function esc(s) {
