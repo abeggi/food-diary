@@ -3,6 +3,7 @@
 Web app multi-utente per tracciare i pasti giornalieri, ottimizzata per uso desktop e mobile.
 
 ![Screenshot](screenshot.png)
+
 - **Backend**: FastAPI + SQLite
 - **Autenticazione**: Firebase Authentication (Google Login)
 - **Frontend**: HTML/CSS/JS (single page, light theme Notion-inspired, mobile-first)
