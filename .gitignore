@@ -20,3 +20,5 @@ migrate_user.py
 CLAUDE.md
 .claude/
 .aider*
+.gitgnore
+
