@@ -339,7 +339,8 @@
     }
 
     input[type="text"],
-    input[type="datetime-local"] {
+    input[type="datetime-local"],
+    textarea {
       width: 100%;
       background: var(--surface2);
       border: 1px solid var(--border2);
@@ -352,8 +353,14 @@
       transition: border-color .15s;
     }
 
-    input:focus {
+    input:focus,
+    textarea:focus {
       border-color: var(--accent-dim);
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 60px;
     }
 
     input[type="datetime-local"] {
@@ -1227,7 +1234,7 @@
         <div>
           <label class="form-label" for="inp-free-notes">note</label>
           <div class="input-wrap">
-            <input type="text" id="inp-free-notes" placeholder="es. senza sale" autocomplete="off">
+            <textarea id="inp-free-notes" rows="3" placeholder="es. senza sale" style="resize: vertical; min-height: 60px; width: 100%; background: var(--surface2); border: 1px solid var(--border2); border-radius: var(--radius); color: var(--text); font-family: var(--mono); font-size: 13px; padding: 9px 12px; outline: none; transition: border-color .15s;"></textarea>
           </div>
         </div>
         <div>
@@ -1661,7 +1668,7 @@
     </div>
     <div class="edit-row" style="margin-top:0">
       <input type="text" id="edit-notes-${id}" placeholder="quantità" value="${esc(entry.notes || '')}">
-      <input type="text" id="edit-free-notes-${id}" placeholder="note" value="${esc(entry.free_notes || '')}">
+      <textarea id="edit-free-notes-${id}" rows="3" placeholder="note" style="resize: vertical; min-height: 60px; width: 100%; background: var(--surface2); border: 1px solid var(--border2); border-radius: var(--radius); color: var(--text); font-family: var(--mono); font-size: 13px; padding: 9px 12px; outline: none; transition: border-color .15s;">${esc(entry.free_notes || '')}</textarea>
     </div>
     <div class="edit-row" style="margin-top:0">
       <div>
