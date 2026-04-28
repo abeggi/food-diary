@@ -240,6 +240,10 @@ def init_db():
             conn.execute("ALTER TABLE whitelist ADD COLUMN user_id TEXT")
         except sqlite3.OperationalError: pass
 
+        try:
+            conn.execute("ALTER TABLE entries ADD COLUMN free_notes TEXT DEFAULT ''")
+        except sqlite3.OperationalError: pass
+
         # Now create indexes on existing/new columns
         conn.executescript("""
             CREATE INDEX IF NOT EXISTS idx_entries_ts ON entries(ts);
@@ -256,12 +260,14 @@ class EntryIn(BaseModel):
     food:  str
     cat:   Optional[str] = ""
     notes: Optional[str] = ""
+    free_notes: Optional[str] = ""
 
 class EntryUpdate(BaseModel):
     ts:    Optional[str]  = None
     food:  Optional[str]  = None
     cat:   Optional[str]  = None
     notes: Optional[str]  = None
+    free_notes: Optional[str]  = None
 
 def parse_ts_or_400(ts: str) -> str:
     value = (ts or "").strip()
@@ -309,8 +315,8 @@ def add_entry(request: Request, entry: EntryIn, user_id: str = Depends(get_curre
             (food_name, user_id)
         )
         cur = conn.execute(
-            "INSERT INTO entries(ts, food, cat, notes, user_id) VALUES(?,?,?,?,?)",
-            (ts_value, food_name, entry.cat or "", entry.notes or "", user_id)
+            "INSERT INTO entries(ts, food, cat, notes, free_notes, user_id) VALUES(?,?,?,?,?,?)",
+            (ts_value, food_name, entry.cat or "", entry.notes or "", entry.free_notes or "", user_id)
         )
         row = conn.execute(
             "SELECT * FROM entries WHERE id=? AND user_id=?", (cur.lastrowid, user_id)
@@ -330,12 +336,13 @@ def update_entry(request: Request, entry_id: int, data: EntryUpdate, user_id: st
         food  = data.food  if data.food  is not None else row["food"]
         cat   = data.cat   if data.cat   is not None else row["cat"]
         notes = data.notes if data.notes is not None else row["notes"]
+        free_notes = data.free_notes if data.free_notes is not None else row["free_notes"]
         food = food.strip()
         if not food:
             raise HTTPException(400, "food cannot be empty")
         conn.execute(
-            "UPDATE entries SET ts=?, food=?, cat=?, notes=? WHERE id=? AND user_id=?",
-            (ts, food, cat, notes, entry_id, user_id)
+            "UPDATE entries SET ts=?, food=?, cat=?, notes=?, free_notes=? WHERE id=? AND user_id=?",
+            (ts, food, cat, notes, free_notes, entry_id, user_id)
         )
         conn.execute("INSERT OR IGNORE INTO foods(name, user_id) VALUES(?,?)", (food, user_id))
         updated = conn.execute(
@@ -403,7 +410,7 @@ def delete_food(request: Request, name: str, user_id: str = Depends(get_current_
 def export_csv(request: Request, user_id: str = Depends(get_current_user)):
     with db_conn() as conn:
         rows = conn.execute(
-            "SELECT id, ts, food, cat, notes, created FROM entries WHERE user_id=? ORDER BY ts ASC",
+            "SELECT id, ts, food, cat, notes, free_notes, created FROM entries WHERE user_id=? ORDER BY ts ASC",
             (user_id,)
         ).fetchall()
     buf = io.StringIO()
@@ -411,7 +418,7 @@ def export_csv(request: Request, user_id: str = Depends(get_current_user)):
     buf.write('\ufeff')
     # Formato italiano: separatore punto e virgola
     writer = csv.writer(buf, delimiter=';')
-    writer.writerow(["id", "data", "tipo", "ora", "cibo", "quantità", "data_creazione", "ora_creazione"])
+    writer.writerow(["id", "data", "tipo", "ora", "cibo", "quantità", "note_libere", "data_creazione", "ora_creazione"])
     for r in rows:
         # Gestione timestamp pasto (ts)
         try:
@@ -436,7 +443,7 @@ def export_csv(request: Request, user_id: str = Depends(get_current_user)):
             pct = r["created"].split(" ")
             d_crea = pct[0]
             t_crea = pct[1] if len(pct) > 1 else ""
-        writer.writerow([r["id"], d_pasto, cat_val, t_pasto, r["food"], r["notes"], d_crea, t_crea])
+        writer.writerow([r["id"], d_pasto, cat_val, t_pasto, r["food"], r["notes"], r["free_notes"], d_crea, t_crea])
     
     filename = f"food_diary_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
     return StreamingResponse(
@@ -450,7 +457,7 @@ def export_csv(request: Request, user_id: str = Depends(get_current_user)):
 def export_json(request: Request, user_id: str = Depends(get_current_user)):
     with db_conn() as conn:
         rows = conn.execute(
-            "SELECT id, ts, food, cat, notes, created FROM entries WHERE user_id=? ORDER BY ts ASC",
+            "SELECT id, ts, food, cat, notes, free_notes, created FROM entries WHERE user_id=? ORDER BY ts ASC",
             (user_id,)
         ).fetchall()
     data = [dict(r) for r in rows]

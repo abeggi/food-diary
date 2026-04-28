@@ -1225,6 +1225,12 @@
           </div>
         </div>
         <div>
+          <label class="form-label" for="inp-free-notes">note</label>
+          <div class="input-wrap">
+            <input type="text" id="inp-free-notes" placeholder="es. senza sale" autocomplete="off">
+          </div>
+        </div>
+        <div>
           <label class="form-label">pasto</label>
           <div class="cat-selector" id="add-cat-selector">
             <div class="cat-chip" data-cat="colazione" onclick="selectCat('colazione', 'add')">colazione</div>
@@ -1538,12 +1544,14 @@
       const time = e.ts.slice(11, 16);
       const cat = e.cat ? `<div class="entry-cat">${esc(e.cat)}</div>` : '';
       const notes = e.notes ? `<div class="entry-notes">${esc(e.notes)}</div>` : '';
+      const free_notes = e.free_notes ? `<div class="entry-notes">${esc(e.free_notes)}</div>` : '';
       return `<div class="entry-row" id="entry-${e.id}" data-cat="${esc(e.cat || '')}">
     <div class="entry-time">${time}</div>
     <div>
       ${cat}
       <div class="entry-food">${esc(e.food)}</div>
       ${notes}
+      ${free_notes}
     </div>
     <div class="entry-actions">
       <button class="btn-icon" onclick="startEdit(${e.id})" title="modifica">✎</button>
@@ -1557,13 +1565,15 @@
       const ts = document.getElementById('inp-ts').value;
       const food = document.getElementById('inp-food').value.trim();
       const notes = document.getElementById('inp-notes').value.trim();
+      const free_notes = document.getElementById('inp-free-notes').value.trim();
       const cat = document.getElementById('inp-cat').value;
       if (!ts) { toast('Imposta la data/ora', 'err'); return; }
       if (!food) { toast('Inserisci cosa hai mangiato', 'err'); return; }
       try {
-        await api('POST', '/api/entries', { ts, food, notes, cat });
+        await api('POST', '/api/entries', { ts, food, notes, free_notes, cat });
         document.getElementById('inp-food').value = '';
         document.getElementById('inp-notes').value = '';
+        document.getElementById('inp-free-notes').value = '';
         document.getElementById('inp-cat').value = '';
         currentAddCat = '';
         updateCatUI('add-cat-selector', '');
@@ -1651,7 +1661,7 @@
     </div>
     <div class="edit-row" style="margin-top:0">
       <input type="text" id="edit-notes-${id}" placeholder="quantità" value="${esc(entry.notes || '')}">
-      <div></div>
+      <input type="text" id="edit-free-notes-${id}" placeholder="note" value="${esc(entry.free_notes || '')}">
     </div>
     <div class="edit-row" style="margin-top:0">
       <div>
@@ -1676,10 +1686,11 @@
       const ts = document.getElementById(`edit-ts-${id}`).value;
       const food = document.getElementById(`edit-food-${id}`).value.trim();
       const notes = document.getElementById(`edit-notes-${id}`).value.trim();
+      const free_notes = document.getElementById(`edit-free-notes-${id}`).value.trim();
       const cat = document.getElementById(`edit-cat-inp-${id}`).value;
       if (!food) { toast('Il campo cibo non può essere vuoto', 'err'); return; }
       try {
-        const updated = await api('PUT', `/api/entries/${id}`, { ts, food, notes, cat });
+        const updated = await api('PUT', `/api/entries/${id}`, { ts, food, notes, free_notes, cat });
         const idx = allEntries.findIndex(e => e.id === id);
         if (idx >= 0) allEntries[idx] = updated;
         editingId = null;
