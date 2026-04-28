@@ -244,6 +244,10 @@ def init_db():
             conn.execute("ALTER TABLE entries ADD COLUMN free_notes TEXT DEFAULT ''")
         except sqlite3.OperationalError: pass
 
+        try:
+            conn.execute("ALTER TABLE entries ADD COLUMN free_notes TEXT DEFAULT ''")
+        except sqlite3.OperationalError: pass
+
         # Now create indexes on existing/new columns
         conn.executescript("""
             CREATE INDEX IF NOT EXISTS idx_entries_ts ON entries(ts);
@@ -261,12 +265,14 @@ class EntryIn(BaseModel):
     cat:   Optional[str] = ""
     notes: Optional[str] = ""
     free_notes: Optional[str] = ""
+    free_notes: Optional[str] = ""
 
 class EntryUpdate(BaseModel):
     ts:    Optional[str]  = None
     food:  Optional[str]  = None
     cat:   Optional[str]  = None
     notes: Optional[str]  = None
+    free_notes: Optional[str]  = None
     free_notes: Optional[str]  = None
 
 def parse_ts_or_400(ts: str) -> str:
