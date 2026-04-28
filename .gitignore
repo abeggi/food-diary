@@ -7,6 +7,11 @@ __pycache__/
 *.sqlite
 *.sqlite3
 *.pyc
+*.log
+*.tmp
+*.bak
+*.swp
+*.swo
 data/
 .venv/
 .DS_Store
@@ -14,4 +19,4 @@ static/firebase-config.js
 migrate_user.py
 CLAUDE.md
 .claude/
-
+.aider*
