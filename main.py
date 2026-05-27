@@ -444,5 +444,11 @@ def settings():
     with open(html_path, "r", encoding="utf-8") as f:
         return f.read()
 
+@app.get("/piano", response_class=HTMLResponse)
+def piano():
+    html_path = os.path.join(BASE_DIR, "static", "piano.html")
+    with open(html_path, "r", encoding="utf-8") as f:
+        return f.read()
+
 # Static assets mount (fallback)
 app.mount("/", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
