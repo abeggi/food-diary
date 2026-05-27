@@ -432,7 +432,7 @@
  <div class="feat-card">
  <div class="feat-icon">🔒</div>
  <div class="feat-title">Privato per design</div>
- <div class="feat-desc">Self-hosted sul tuo server. I tuoi dati non escono mai dalla tua infrastruttura. Login Google via Firebase: semplice e sicuro.</div>
+ <div class="feat-desc">Self-hosted sul tuo server. I tuoi dati non escono mai dalla tua infrastruttura. Autenticazione gestita dal reverse proxy.</div>
  </div>
  <div class="feat-card">
  <div class="feat-icon">📱</div>
@@ -449,11 +449,11 @@
  <div class="feat-title">AI Food Scanner</div>
  <div class="feat-desc">Inquadra il piatto e lascia che Google Gemini Vision lo riconosca. Un tap per registrare. (Solo per l'amministratore.)</div>
  </div>
- <div class="feat-card">
- <div class="feat-icon">👥</div>
- <div class="feat-title">Multi-utente con whitelist</div>
- <div class="feat-desc">Condividi l'istanza con familiari o amici. L'admin gestisce gli accessi con un pannello dedicato.</div>
- </div>
+  <div class="feat-card">
+  <div class="feat-icon">👤</div>
+  <div class="feat-title">Utente singolo</div>
+  <div class="feat-desc">Progettato per uso personale. L'autenticazione è gestita dal reverse proxy — niente login interno, niente whitelist.</div>
+  </div>
  <div class="feat-card">
  <div class="feat-icon">📦</div>
  <div class="feat-title">Esporta i tuoi dati</div>
@@ -465,42 +465,42 @@
 <!-- GET STARTED -->
 <div class="container" id="get-started">
  <section class="getstarted">
- <div class="section-label">Get Started</div>
- <h2 class="section-title">In produzione in pochi minuti.</h2>
- <div class="steps">
- <div class="step">
- <div class="step-num">1</div>
- <div class="step-title">Crea il progetto Firebase</div>
- <div class="step-desc">
- Vai su <a href="https://console.firebase.google.com" target="_blank" rel="noopener">Firebase Console</a>, crea un progetto, abilita l'autenticazione Google e scarica la chiave JSON del service account.
- </div>
- </div>
- <div class="step">
- <div class="step-num">2</div>
- <div class="step-title">Configura l'ambiente</div>
- <div class="step-desc">
- Copia <code>.env.example</code> in <code>.env</code> e inserisci <code>FIREBASE_SERVICE_ACCOUNT_JSON</code>, <code>ADMIN_EMAIL</code> e opzionalmente <code>GEMINI_API_KEY</code>.
- </div>
- </div>
- <div class="step">
- <div class="step-num">3</div>
- <div class="step-title">Avvia con Docker</div>
- <div class="step-desc">
- <code>docker compose up -d</code> — l'app sarà disponibile sulla porta <code>8080</code>. In alternativa usa <code>install.sh</code> per il setup via systemd.
- </div>
- </div>
- <div class="step">
- <div class="step-num">4</div>
- <div class="step-title">Approva gli utenti</div>
- <div class="step-desc">
- Accedi con l'account <code>ADMIN_EMAIL</code>. Dal pannello Impostazioni puoi abilitare altri utenti sulla whitelist.
- </div>
- </div>
- </div>
+  <div class="section-label">Get Started</div>
+  <h2 class="section-title">In produzione in pochi minuti.</h2>
+  <div class="steps">
+  <div class="step">
+  <div class="step-num">1</div>
+  <div class="step-title">Clona il repository</div>
+  <div class="step-desc">
+  <code>git clone https://github.com/abeggi/food-diary</code> e posizionati nella directory.
+  </div>
+  </div>
+  <div class="step">
+  <div class="step-num">2</div>
+  <div class="step-title">Configura l'ambiente</div>
+  <div class="step-desc">
+  Copia <code>.env.example</code> in <code>.env</code> e inserisci <code>GEMINI_API_KEY</code> (opzionale, per lo scanner AI).
+  </div>
+  </div>
+  <div class="step">
+  <div class="step-num">3</div>
+  <div class="step-title">Avvia con Docker</div>
+  <div class="step-desc">
+  <code>docker compose up -d</code> — l'app sarà disponibile sulla porta <code>8080</code>. In alternativa usa <code>install.sh</code> per il setup via systemd.
+  </div>
+  </div>
+  <div class="step">
+  <div class="step-num">4</div>
+  <div class="step-title">Usa l'app</div>
+  <div class="step-desc">
+  Apri il browser all'indirizzo del server. L'autenticazione è gestita dal reverse proxy — nessun login richiesto.
+  </div>
+  </div>
+  </div>
  </section>
 </div>
 
-<!-- ACCESSO SENZA INSTALLARE -->
+<!-- ACCESSO -->
 <div class="container">
   <section class="getstarted">
     <div class="section-label">Accesso</div>
@@ -521,20 +521,9 @@
 
       <div class="step">
         <div class="step-num">2</div>
-        <div class="step-title">Accedi con Google</div>
+        <div class="step-title">Usa l'app</div>
         <div class="step-desc">
-          Effettua l'accesso utilizzando il tuo account Google.
-          L'autenticazione è gestita da Firebase.
-        </div>
-      </div>
-
-      <div class="step">
-        <div class="step-num">3</div>
-        <div class="step-title">Richiedi l'abilitazione</div>
-        <div class="step-desc">
-          Invia una email a
-          <a href="mailto:abeggi@gmail.com">abeggi@gmail.com</a>.
-          L'account viene aggiunto alla whitelist e diventa utilizzabile.
+          L'autenticazione è gestita dal reverse proxy. L'app è già pronta all'uso — nessun login o richiesta di abilitazione.
         </div>
       </div>
     </div>
@@ -548,7 +537,7 @@
  <div class="stack-chips">
  <div class="chip"><span class="chip-dot" style="background:#4a9eff"></span>FastAPI</div>
  <div class="chip"><span class="chip-dot" style="background:#38bdf8"></span>SQLite</div>
- <div class="chip"><span class="chip-dot" style="background:#fbbf24"></span>Firebase Auth</div>
+
  <div class="chip"><span class="chip-dot" style="background:#34d399"></span>Google Gemini</div>
  <div class="chip"><span class="chip-dot" style="background:#818cf8"></span>Docker</div>
  <div class="chip"><span class="chip-dot" style="background:#a78bfa"></span>systemd</div>

@@ -13,9 +13,8 @@ from contextlib import contextmanager
 import base64
 import httpx
 from dotenv import load_dotenv
-import firebase_admin
-from firebase_admin import credentials, auth
-from fastapi import Depends, Header
+
+from fastapi import Depends
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -28,29 +27,10 @@ DB_PATH  = os.environ.get("FOOD_DIARY_DB", os.path.join(BASE_DIR, "food_diary.db
 # AI config (Google Gemini)
 GEMINI_KEY    = os.environ.get("GEMINI_API_KEY", "")
 GEMINI_MODEL  = os.environ.get("GEMINI_MODEL", "gemini-1.5-flash")
-ADMIN_EMAIL   = os.environ.get("ADMIN_EMAIL")
-if not ADMIN_EMAIL:
-    raise RuntimeError("CRITICAL SEC ERROR: Variabile d'ambiente ADMIN_EMAIL non configurata.")
-DEV_MODE      = os.environ.get("DEV_MODE", "false").lower() == "true"
 
-# Firebase admin init
-FIREBASE_SACC_PATH = os.environ.get("FIREBASE_SERVICE_ACCOUNT")
-if FIREBASE_SACC_PATH and os.path.exists(FIREBASE_SACC_PATH):
-    cred = credentials.Certificate(FIREBASE_SACC_PATH)
-    firebase_admin.initialize_app(cred)
-elif os.environ.get("FIREBASE_SERVICE_ACCOUNT_JSON"):
-    # Carica da stringa JSON (utile per Docker/Env) in memoria, nessun file temporaneo su disco.
-    try:
-        cert_dict = json.loads(os.environ.get("FIREBASE_SERVICE_ACCOUNT_JSON"))
-        cred = credentials.Certificate(cert_dict)
-        firebase_admin.initialize_app(cred)
-    except json.JSONDecodeError:
-        raise RuntimeError("CRITICAL SEC ERROR: FIREBASE_SERVICE_ACCOUNT_JSON non è un JSON valido.")
-else:
-    if DEV_MODE:
-        print("Warning: DEV_MODE attivo. FIREBASE non configurato. Autenticazione MOCK attivata.")
-    else:
-        raise RuntimeError("CRITICAL SEC ERROR: Firebase non configurato. Impossibile avviare in produzione senza protezione.")
+# Single user (auth handled externally by reverse proxy)
+USER_UID   = "abeggi"
+USER_EMAIL = "abeggi@gmail.com"
 
 # ── Rate Limiter ─────────────────────────────────────────────────────────────
 limiter = Limiter(key_func=get_remote_address)
@@ -60,35 +40,9 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # ── Auth Dependency ──────────────────────────────────────────────────────────
-async def get_current_user_dict(authorization: Optional[str] = Header(None)) -> dict:
-    """Estrae e verifica il token Firebase, restituendo l'intero oggetto utente."""
-    if not authorization:
-        if not firebase_admin._apps and DEV_MODE:
-            return {"uid": "dev_user", "email": "dev@local", "is_admin": True}
-        raise HTTPException(401, "Missing authorization header")
-    
-    token = authorization.replace("Bearer ", "")
-    try:
-        if not firebase_admin._apps and DEV_MODE:
-             return {"uid": "dev_user", "email": "dev@local", "is_admin": True}
-        decoded_token = auth.verify_id_token(token)
-        user_email = decoded_token.get('email', '')
-        uid = decoded_token['uid']
-        is_admin = (user_email == ADMIN_EMAIL)
-        
-        with db_conn() as conn:
-            if not is_admin:
-                row = conn.execute("SELECT email FROM whitelist WHERE email = ?", (user_email,)).fetchone()
-                if not row:
-                    raise HTTPException(403, f"Accesso negato. Invia una mail a {ADMIN_EMAIL} per richiedere l'abilitazione dell'account: {user_email}")
-            
-            # Aggiorna il DB locale per mantenere l'associazione Email -> Firebase UID
-            conn.execute("UPDATE whitelist SET user_id = ? WHERE email = ?", (uid, user_email))
-
-        return {"uid": uid, "email": user_email, "is_admin": is_admin}
-    except Exception as e:
-        if isinstance(e, HTTPException): raise e
-        raise HTTPException(401, f"Invalid token: {str(e)}")
+async def get_current_user_dict() -> dict:
+    """Restituisce l'utente fisso (auth gestita dal reverse proxy)."""
+    return {"uid": USER_UID, "email": USER_EMAIL, "is_admin": True}
 
 async def get_current_user(user: dict = Depends(get_current_user_dict)) -> str:
     """Ritorna solo l'UID per compatibilità coi CRUD endpoints."""
@@ -110,80 +64,12 @@ async def get_me(request: Request, user: dict = Depends(get_current_user_dict)):
 @app.get("/api/admin/users")
 @limiter.limit("10/minute")
 def admin_list_users(request: Request, admin_id: str = Depends(get_admin_user)):
-    """Elenca utenti Firebase con stato whitelist."""
-    if not firebase_admin._apps and DEV_MODE:
-        return [{"uid": "dev_user", "email": "dev@local", "display_name": "Dev User", "is_allowed": True}]
-    
-    with db_conn() as conn:
-        allowed = {r["email"].lower() for r in conn.execute("SELECT email FROM whitelist").fetchall()}
-    
-    users = []
-    page = auth.list_users()
-    while page:
-        for user in page.users:
-            users.append({
-                "uid": user.uid,
-                "email": user.email,
-                "display_name": user.display_name,
-                "created": datetime.fromtimestamp(user.user_metadata.creation_timestamp / 1000).isoformat() if user.user_metadata.creation_timestamp else None,
-                "is_allowed": user.email.lower() in allowed or user.email.lower() == ADMIN_EMAIL.lower()
-            })
-        page = page.get_next_page()
-    return users
+    return [{"uid": USER_UID, "email": USER_EMAIL, "display_name": "Andrea Beggi", "is_allowed": True}]
 
 @app.delete("/api/admin/users/{uid}", status_code=204)
 @limiter.limit("10/minute")
 def admin_delete_user(request: Request, uid: str, admin_id: str = Depends(get_admin_user)):
-    """Elimina definitivamente un utente da Firebase e rimuove i suoi dati dal DB."""
-    if not firebase_admin._apps and DEV_MODE:
-        return
-        
-    try:
-        # Pre-fetch user l'email prima di cancellarlo per pulire la whitelist
-        try:
-            user_to_delete = auth.get_user(uid)
-            email_to_remove = user_to_delete.email
-        except:
-            email_to_remove = None
-
-        # 1. Firebase delete
-        auth.delete_user(uid)
-        
-        # 2. Database cleanup
-        with db_conn() as conn:
-            conn.execute("DELETE FROM entries WHERE user_id=?", (uid,))
-            conn.execute("DELETE FROM foods WHERE user_id=?", (uid,))
-            if email_to_remove and email_to_remove.lower() != ADMIN_EMAIL.lower():
-                conn.execute("DELETE FROM whitelist WHERE email=?", (email_to_remove,))
-            
-    except Exception as e:
-        raise HTTPException(500, f"Errore durante l'eliminazione: {str(e)}")
-
-# ── Whitelist API ─────────────────────────────────────────────────────────────
-@app.get("/api/admin/whitelist")
-@limiter.limit("10/minute")
-def get_whitelist(request: Request, admin_id: str = Depends(get_admin_user)):
-    with db_conn() as conn:
-        rows = conn.execute("SELECT * FROM whitelist ORDER BY email ASC").fetchall()
-        return [dict(r) for r in rows]
-
-@app.post("/api/admin/whitelist", status_code=201)
-@limiter.limit("10/minute")
-def add_to_whitelist(request: Request, data: dict, admin_id: str = Depends(get_admin_user)):
-    email = data.get("email", "").strip().lower()
-    if not email: raise HTTPException(400, "Email mancante")
-    with db_conn() as conn:
-        conn.execute("INSERT OR IGNORE INTO whitelist (email) VALUES (?)", (email,))
-    return {"status": "ok"}
-
-@app.delete("/api/admin/whitelist/{email}")
-@limiter.limit("10/minute")
-def remove_from_whitelist(request: Request, email: str, admin_id: str = Depends(get_admin_user)):
-    if email.lower() == ADMIN_EMAIL.lower():
-        raise HTTPException(400, "Non puoi rimuovere l'amministratore dalla whitelist")
-    with db_conn() as conn:
-        conn.execute("DELETE FROM whitelist WHERE email = ?", (email.lower(),))
-    return {"status": "ok"}
+    return
 
 # ── DB ────────────────────────────────────────────────────────────────────────
 def get_db():
@@ -221,9 +107,6 @@ def init_db():
             );
         """)
         # Migrations (Add columns if missing)
-        try:
-            conn.execute("INSERT OR IGNORE INTO whitelist (email) VALUES (?)", (ADMIN_EMAIL,))
-        except: pass
         try:
             conn.execute("ALTER TABLE entries ADD COLUMN cat TEXT DEFAULT ''")
         except sqlite3.OperationalError: pass

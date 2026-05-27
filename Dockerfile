@@ -24,8 +24,7 @@ EXPOSE 8080
 # Variabili d'ambiente di default
 ENV FOOD_DIARY_DB=/app/data/food_diary.db
 ENV PYTHONUNBUFFERED=1
-# ADMIN_EMAIL è OBBLIGATORIA e deve essere fornita a runtime (es. docker run -e ADMIN_EMAIL=...)
-# FIREBASE_SERVICE_ACCOUNT_JSON è OBBLIGATORIA (oppure montare il file e usare FIREBASE_SERVICE_ACCOUNT)
+# GEMINI_API_KEY è opzionale — necessaria solo per lo scanner AI
 
 # Comando per avviare l'applicazione
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
